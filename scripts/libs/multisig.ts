@@ -1,60 +1,60 @@
 /* global ethers */
 /* eslint-disable  prefer-const */
 
-import { SafeTransactionDataPartial } from '@gnosis.pm/safe-core-sdk-types'
-import { Signer } from '@ethersproject/abstract-signer'
-import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import { PopulatedTransaction } from '@ethersproject/contracts'
+import { SafeTransactionDataPartial } from "@gnosis.pm/safe-core-sdk-types";
+import { Signer } from "@ethersproject/abstract-signer";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { PopulatedTransaction } from "@ethersproject/contracts";
 
 export async function sendToMultisig(
   multisigAddress: string,
   signer: Signer,
   transaction: any,
-  hre: HardhatRuntimeEnvironment,
+  hre: HardhatRuntimeEnvironment
 ) {
   const abi = [
-    'function submitTransaction(address destination, uint value, bytes data) public returns (uint transactionId)',
-  ]
+    "function submitTransaction(address destination, uint value, bytes data) public returns (uint transactionId)",
+  ];
   const multisigContract = await hre.ethers.getContractAt(
     abi,
     multisigAddress,
-    signer,
-  )
-  console.log('Sending transaction to multisig:', multisigAddress)
+    signer
+  );
+  console.log("Sending transaction to multisig:", multisigAddress);
   let tx = await multisigContract.submitTransaction(
     transaction.to,
     0,
     transaction.data,
-    { gasPrice: 5000000000 },
-  )
-  let receipt = await tx.wait()
+    { gasPrice: 50000000000 }
+  );
+  let receipt = await tx.wait();
   if (!receipt.status) {
-    throw Error(`Failed to send transaction to multisig: ${tx.hash}`)
+    throw Error(`Failed to send transaction to multisig: ${tx.hash}`);
   }
-  console.log('Completed sending transaction to multisig:', tx.hash)
-  return tx
+  console.log("Completed sending transaction to multisig:", tx.hash);
+  return tx;
 }
 
 export async function sendToGnosisSafe(
   hre: HardhatRuntimeEnvironment,
   multisigAddress: string,
   transaction: PopulatedTransaction,
-  signer: Signer,
+  signer: Signer
 ) {
   console.log(
-    `Sending to Gnosis Safe at address: ${multisigAddress} on ${hre.network.name} network`,
-  )
+    `Sending to Gnosis Safe at address: ${multisigAddress} on ${hre.network.name} network`
+  );
 
   try {
     const transactions: SafeTransactionDataPartial[] = [
       {
         to: multisigAddress,
-        value: transaction.value ? transaction.value.toString() : '0',
-        data: transaction.data ? transaction.data : '0x',
+        value: transaction.value ? transaction.value.toString() : "0",
+        data: transaction.data ? transaction.data : "0x",
       },
-    ]
+    ];
 
-    console.log('transactions:', transactions)
+    console.log("transactions:", transactions);
 
     /*const ethAdapterOwner1 = new EthersAdapter({
       ethers: hre.ethers,
@@ -75,9 +75,9 @@ export async function sendToGnosisSafe(
     await safeSdk.signTransaction(safeTransaction);
     */
 
-    console.log('Owner has signed!')
+    console.log("Owner has signed!");
   } catch (error) {
-    console.log('Error creating txn:', error)
+    console.log("Error creating txn:", error);
   }
 }
 
@@ -119,4 +119,4 @@ export async function sendToGnosisSafe(
 //     })
 // }
 
-exports.sendToMultisig = sendToMultisig
+exports.sendToMultisig = sendToMultisig;

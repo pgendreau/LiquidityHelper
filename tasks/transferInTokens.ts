@@ -34,7 +34,12 @@ task(
       } else {
         signer = (await hre.ethers.getSigners())[0];
       }
-      console.log("Transferring token to helper contract ", HelperAddress);
+      console.log(
+        `Transferring ${hre.ethers.utils.formatEther(
+          amount
+        )} ${tokenAddress} to helper contract`,
+        HelperAddress
+      );
       let erc20 = await hre.ethers.getContractAt(abi, tokenAddress);
 
       if (hre.network.name === "matic") {
