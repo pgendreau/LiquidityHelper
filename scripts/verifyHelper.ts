@@ -22,15 +22,15 @@ async function verifyHelper(
       ],
       router,
       '0x385eeac5cb85a38a9a07a70c73e0a3271cfb54a7',
-      '0xC3c2e1Cf099Bc6e1fA94ce358562BCbD5cc59FE5',
+      '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
     ],
   })
 }
 
 verifyHelper(
-  '0x888C1DDFCDF52993E84cf00A962354063a08A6b9',
+  '0x3BC097e73f94F80ee7a164f21a086528AF86346b',
   '0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff',
-  '0xC3c2e1Cf099Bc6e1fA94ce358562BCbD5cc59FE5',
+  '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
 )
   .then(() => process.exit(0))
   .catch((error) => {

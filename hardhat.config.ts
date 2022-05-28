@@ -7,9 +7,9 @@ import '@nomiclabs/hardhat-etherscan'
 require('hardhat-contract-sizer')
 require('dotenv').config()
 require('solidity-coverage')
-require('./tasks/addLiquidity')
-require('./tasks/removeLiquidity')
-require('./tasks/transferInTokens')
+//require('./tasks/addLiquidity')
+//require('./tasks/removeLiquidity')
+//require('./tasks/transferInTokens')
 
 // You have to export an object to set up your config
 // This object can have the following optional entries:
