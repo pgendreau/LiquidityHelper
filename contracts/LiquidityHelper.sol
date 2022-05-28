@@ -69,6 +69,26 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+
+    function swapTokenForGHST(SwapTokenForGHSTArgs calldata _args) public onlyOwner {
+        address[] memory path = new address[](2);
+            path[0] = _args._token;
+            path[1] = GHST;
+        router.swapExactTokensForTokens(
+            _args._amount,
+            _args._amountMin,
+            path,
+            address(this),
+            block.timestamp + 3000
+        );
+    }
+
+    function batchSwapTokenForGHST(SwapTokenForGHSTArgs[] calldata _args) external {
+        for (uint256 i; i < _args.length; i++) {
+            swapTokenForGHST(_args[i]);
+        }
+    }
+
     function addLiquidity(AddLiquidityArgs calldata _args) public onlyOwner {
         router.addLiquidity(
             _args._tokenA,

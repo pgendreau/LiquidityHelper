@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: MIT
 interface ILiquidityHelper {
+
+  struct SwapTokenForGHSTArgs {
+    address _token;
+    uint256 _amount;
+    uint256 _amountMin;
+  }
+
   struct AddLiquidityArgs {
     address _tokenA;
     address _tokenB;
