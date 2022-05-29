@@ -6,3 +6,4 @@ artifacts
 .vscode
 .env
 contracts.txt
+tmp
