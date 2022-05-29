@@ -2,12 +2,14 @@
 import { run } from 'hardhat'
 async function verifyHelper(
   deployedAddress: string,
+  farm: string,
   router: string,
   owner: string,
 ) {
   await run('verify:verify', {
     address: deployedAddress,
     constructorArguments: [
+      '0x3801C3B3B5c98F88a9c9005966AA96aa440B9Afc',
       [
         '0x403E967b044d4Be25170310157cB1A4Bf10bdD0f',
         '0x44A6e0BE76e1D9620A7F76588e4509fE4fa8E8C8',
@@ -19,7 +21,9 @@ async function verifyHelper(
         '0x641CA8d96b01Db1E14a5fBa16bc1e5e508A45f2B',
         '0xC765ECA0Ad3fd27779d36d18E32552Bd7e26Fd7b',
         '0xBFad162775EBfB9988db3F24ef28CA6Bc2fB92f0',
+        '0xb0E35478a389dD20050D66a67FB761678af99678',
       ],
+      farm,
       router,
       '0x385eeac5cb85a38a9a07a70c73e0a3271cfb54a7',
       '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
@@ -28,7 +32,8 @@ async function verifyHelper(
 }
 
 verifyHelper(
-  '0x3BC097e73f94F80ee7a164f21a086528AF86346b',
+  '0xe1885a619FbCdda26d72F0BD9dEAE6cf28c12853',
+  '0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c',
   '0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff',
   '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
 )

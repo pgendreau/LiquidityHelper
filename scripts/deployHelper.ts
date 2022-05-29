@@ -7,20 +7,25 @@ export async function deployHelper() {
     "0x6a3E7C3c6EF65Ee26975b12293cA1AAD7e1dAeD2",
     "0x42E5E06EF5b90Fe15F853F59299Fc96259209c5C",
   ];
-  const _pairAddresses: [string, string, string, string] = [
+  const _pairAddresses: [string, string, string, string, string] = [
     "0xfEC232CC6F0F3aEb2f81B2787A9bc9F6fc72EA5C",
     "0x641CA8d96b01Db1E14a5fBa16bc1e5e508A45f2B",
     "0xC765ECA0Ad3fd27779d36d18E32552Bd7e26Fd7b",
     "0xBFad162775EBfB9988db3F24ef28CA6Bc2fB92f0",
+    "0xb0E35478a389dD20050D66a67FB761678af99678",
   ];
+  const _masterChef = "0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c";
   const _quickswapRouter = "0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff";
   const ghst = "0x385eeac5cb85a38a9a07a70c73e0a3271cfb54a7";
+  const gltr = "0x3801C3B3B5c98F88a9c9005966AA96aa440B9Afc";
   const owner = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
 
   const Helper = await ethers.getContractFactory("LiquidityHelper");
   const helper = await Helper.deploy(
+    gltr,
     _alchemicaTokens,
     _pairAddresses,
+    _masterChef,
     _quickswapRouter,
     ghst,
     owner
