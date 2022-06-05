@@ -2,9 +2,8 @@
 import { run } from 'hardhat'
 async function verifyHelper(
   deployedAddress: string,
-  farm: string,
-  router: string,
   owner: string,
+  operator: string,
 ) {
   await run('verify:verify', {
     address: deployedAddress,
@@ -23,18 +22,18 @@ async function verifyHelper(
         '0xBFad162775EBfB9988db3F24ef28CA6Bc2fB92f0',
         '0xb0E35478a389dD20050D66a67FB761678af99678',
       ],
-      farm,
-      router,
+      '0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c',
+      '0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff',
       '0x385eeac5cb85a38a9a07a70c73e0a3271cfb54a7',
-      '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
+      owner,
+      operator,
     ],
   })
 }
 
 verifyHelper(
-  '0x3AbCc5A0065ddD80e5e92e7467c2836352dA9ce6',
-  '0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c',
-  '0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff',
+  '0x09C7731F4f5eCa006C9E635a75a1F7298AcAaAfa',
+  '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
   '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
 )
   .then(() => process.exit(0))

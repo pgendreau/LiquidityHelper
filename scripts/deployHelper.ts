@@ -19,6 +19,7 @@ export async function deployHelper() {
   const ghst = "0x385eeac5cb85a38a9a07a70c73e0a3271cfb54a7";
   const gltr = "0x3801C3B3B5c98F88a9c9005966AA96aa440B9Afc";
   const owner = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
+  const operator = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
 
   const Helper = await ethers.getContractFactory("LiquidityHelper");
   const helper = await Helper.deploy(
@@ -28,16 +29,19 @@ export async function deployHelper() {
     _masterChef,
     _quickswapRouter,
     ghst,
-    owner
+    owner,
+    operator,
   );
 
   //@ts-ignore
   //   const helper = (await Helper.deploy(
   //     alchemicaTokens,
   //     pairAddresses,
+  //     stakingContract,
   //     quickswapRouter,
   //     GHST,
   //     multisig,
+  //     bot,
   //   )) as LiquidityHelper
   await helper.deployed();
 

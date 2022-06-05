@@ -11,11 +11,13 @@ contract LiquidityHelper is ILiquidityHelper {
     IMasterChef farm;
     address GHST;
     address owner;
+    address operator;
     //0--fud
     //1--fomo
     //2--alpha
     //3--kek
     address[4] alchemicaTokens;
+    address[] lpTokens;
     address GLTR;
 
     constructor(
@@ -25,7 +27,8 @@ contract LiquidityHelper is ILiquidityHelper {
         address _farmAddress,
         address _routerAddress,
         address _ghst,
-        address _owner
+        address _owner,
+        address _operator
     ) {
         //approve ghst
         IERC20(_ghst).approve(_routerAddress, type(uint256).max);
@@ -62,10 +65,12 @@ contract LiquidityHelper is ILiquidityHelper {
 
         GLTR = _gltr;
         alchemicaTokens = _alchemicaTokens;
+        lpTokens = _pairAddresses;
         farm = IMasterChef(_farmAddress);
         router = IUniswapV2Router01(_routerAddress);
         GHST = _ghst;
         owner = _owner;
+        operator = _operator;
     }
 
     modifier onlyOwner() {
@@ -73,9 +78,27 @@ contract LiquidityHelper is ILiquidityHelper {
         _;
     }
 
+    modifier onlyOperator() {
+        require(msg.sender == operator, "Not Operator");
+        _;
+    }
+
+    modifier onlyOperatorOrOwner() {
+        require(
+            msg.sender == operator || msg.sender == owner,
+            "Not Operator or Owner"
+        );
+        _;
+    }
+
     function transferOwnership(address _newOwner) external onlyOwner {
         assert(_newOwner != address(0));
         owner = _newOwner;
+    }
+
+    function setOperator(address _newOperator) external onlyOwner {
+        assert(_newOperator != address(0));
+        operator = _newOperator;
     }
 
     function returnTokens(
@@ -88,9 +111,9 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
-    function stakePoolToken(StakePoolTokenArgs calldata _args)
+    function stakePoolToken(StakePoolTokenArgs memory _args)
         public
-        onlyOwner
+        onlyOperatorOrOwner
     {
         farm.deposit(
             _args._poolId,
@@ -98,8 +121,8 @@ contract LiquidityHelper is ILiquidityHelper {
         );
     }
 
-    function batchStakePoolToken(StakePoolTokenArgs[] calldata _args)
-        external
+    function batchStakePoolToken(StakePoolTokenArgs[] memory _args)
+        public 
     {
         for (uint256 i; i < _args.length; i++) {
             stakePoolToken(_args[i]);
@@ -124,20 +147,129 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
-//    function stakingPoolBalance(uint256 _poolId)
-//        external
-//        view
-//        returns(uint256, uint256)
-//    {
-//        UserInfo memory ui;
+//    function distributeAlchemica() external  {
 //
-//        ui = farm.userInfo(
-//            _poolId,
-//            address(this)
-//        );
-//
-//        return (ui.amount, ui.rewardDebt);
 //    }
+
+//    function stakeGHSTForFrens() external  {
+//
+//    }
+
+    function stakeAllAlchemicaTokens() external onlyOperatorOrOwner {
+
+        for (uint256 i; i < alchemicaTokens.length; i++) {
+
+            SwapTokenForGHSTArgs memory swapArg = SwapTokenForGHSTArgs(
+                alchemicaTokens[i],
+                // swap half of the balance
+                IERC20(alchemicaTokens[i]).balanceOf(address(this))/2,
+                //fix to 1% slippage
+                0
+            );
+            swapTokenForGHST(swapArg);
+
+            uint256 amountGHST = IERC20(GHST).balanceOf(address(this));
+            uint256 amountAlchemica = IERC20(alchemicaTokens[i]).balanceOf(address(this));
+            //uint256 minAmountGHST = amountGHST - (amountGHST*1/100);
+            //uint256 minAmountAlchemica = amountAlchemica - (amountAlchemica*1/100);
+            AddLiquidityArgs memory poolArg = AddLiquidityArgs(
+                GHST,
+                alchemicaTokens[i],
+                IERC20(GHST).balanceOf(address(this)),
+                IERC20(alchemicaTokens[i]).balanceOf(address(this)),
+                0,
+                0
+                //minAmountGHST,
+                //minAmountAlchemica
+            );
+            addLiquidity(poolArg);
+
+            StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
+                // pools 1-4 = fud, fomo, alpha, keke 
+                // alchemica tokens 1-4 = fud, fomo, alpha, keke 
+                i,
+                IERC20(lpTokens[i]).balanceOf(address(this))
+            );
+            stakePoolToken(stakeArg);
+
+        }
+    }
+
+    function splitAllAlchemicaTokens() external onlyOperatorOrOwner {
+
+        SwapTokenForGHSTArgs[] memory args; 
+
+        for (uint256 i; i < alchemicaTokens.length; i++) {
+            SwapTokenForGHSTArgs memory arg = SwapTokenForGHSTArgs(
+                alchemicaTokens[i],
+                // swap half of the balance
+                IERC20(alchemicaTokens[i]).balanceOf(address(this))/2,
+                //fix to 1% slippage
+                0
+            );
+            args[i] = arg;
+        }
+
+        batchSwapTokenForGHST(args);
+            
+    }
+
+    function poolAllAlchemicaTokens() external onlyOperatorOrOwner {
+
+        AddLiquidityArgs[] memory args; 
+
+        for (uint256 i; i < alchemicaTokens.length; i++) {
+            uint256 amountGHST = IERC20(GHST).balanceOf(address(this));
+            uint256 amountAlchemica = IERC20(alchemicaTokens[i]).balanceOf(address(this));
+            //uint256 minAmountGHST = amountGHST - (amountGHST*1/100);
+            //uint256 minAmountAlchemica = amountAlchemica - (amountAlchemica*1/100);
+            AddLiquidityArgs memory arg = AddLiquidityArgs(
+                GHST,
+                alchemicaTokens[i],
+                IERC20(GHST).balanceOf(address(this)),
+                IERC20(alchemicaTokens[i]).balanceOf(address(this)),
+                0,
+                0
+                //minAmountGHST,
+                //minAmountAlchemica
+            );
+            args[i] = arg;
+        }
+
+        batchAddLiquidity(args);
+
+    }
+
+    function stakeAllAlchemicaTokens() external onlyOperatorOrOwner {
+
+        StakePoolTokenArgs[] memory args; 
+
+        for (uint256 i; i < alchemicaTokens.length; i++) {
+            StakePoolTokenArgs memory arg = StakePoolTokenArgs(
+                // pools 1-4 = fud, fomo, alpha, keke 
+                // alchemica tokens 1-4 = fud, fomo, alpha, keke 
+                i,
+                IERC20(lpTokens[i]).balanceOf(address(this))
+            );
+            args[i] = arg;
+        }
+
+        batchStakePoolToken(args);
+
+    }
+
+    function stakingPoolBalance(uint256 _poolId)
+        external
+        view
+        returns(IMasterChef.UserInfo memory ui)
+    {
+        ui = farm.userInfo(
+            _poolId,
+            address(this)
+        );
+
+        return (ui);
+    }
 
     function claimReward(uint256 _poolId)
         public
@@ -153,9 +285,9 @@ contract LiquidityHelper is ILiquidityHelper {
         farm.batchHarvest(_pools);
     }
 
-    function swapTokenForGHST(SwapTokenForGHSTArgs calldata _args)
+    function swapTokenForGHST(SwapTokenForGHSTArgs memory _args)
         public
-        onlyOwner
+        onlyOperatorOrOwner
     {
         address[] memory path = new address[](2);
             path[0] = _args._token;
@@ -169,31 +301,15 @@ contract LiquidityHelper is ILiquidityHelper {
         );
     }
 
-    function batchSwapTokenForGHST(SwapTokenForGHSTArgs[] calldata _args)
-        external
+    function batchSwapTokenForGHST(SwapTokenForGHSTArgs[] memory _args)
+        public 
     {
         for (uint256 i; i < _args.length; i++) {
             swapTokenForGHST(_args[i]);
         }
     }
 
-//    function splitAllTokens() external onlyOwner {
-//        SwapTokenForGHSTArgs[4] memory args; 
-//        for (uint256 i; i < args.length; i++) {
-//            SwapTokenForGHSTArgs memory arg = SwapTokenForGHSTArgs(
-//                alchemicaTokens[i],
-//                // swap half of the balance
-//                IERC20(alchemicaTokens[i]).balanceOf(address(this))/2,
-//                0
-//            );
-//            args[i] = arg;
-//        }
-//
-//        batchSwapTokenForGHST(SwapTokenForGHSTArgs);
-//            
-//    }
-
-    function addLiquidity(AddLiquidityArgs calldata _args) public onlyOwner {
+    function addLiquidity(AddLiquidityArgs memory _args) public onlyOperatorOrOwner {
         router.addLiquidity(
             _args._tokenA,
             _args._tokenB,
@@ -221,7 +337,7 @@ contract LiquidityHelper is ILiquidityHelper {
         );
     }
 
-    function batchAddLiquidity(AddLiquidityArgs[] calldata _args) external {
+    function batchAddLiquidity(AddLiquidityArgs[] memory _args) public {
         for (uint256 i; i < _args.length; i++) {
             addLiquidity(_args[i]);
         }
@@ -241,5 +357,9 @@ contract LiquidityHelper is ILiquidityHelper {
 
     function contractOwner() public view returns (address) {
         return owner;
+    }
+
+    function contractOperator() public view returns (address) {
+        return operator;
     }
 }
