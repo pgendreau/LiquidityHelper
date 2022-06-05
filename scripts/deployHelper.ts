@@ -14,6 +14,7 @@ export async function deployHelper() {
     "0xBFad162775EBfB9988db3F24ef28CA6Bc2fB92f0",
     "0xb0E35478a389dD20050D66a67FB761678af99678",
   ];
+  const _pools = [1,2,3,4,7];
   const _masterChef = "0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c";
   const _quickswapRouter = "0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff";
   const ghst = "0x385eeac5cb85a38a9a07a70c73e0a3271cfb54a7";
@@ -26,6 +27,7 @@ export async function deployHelper() {
     gltr,
     _alchemicaTokens,
     _pairAddresses,
+    _pools,
     _masterChef,
     _quickswapRouter,
     ghst,
