@@ -398,7 +398,7 @@ contract LiquidityHelper is ILiquidityHelper {
         return stakeGLTR;
     }
 
-    function getContractOperator() public view returns (address) {
+    function getOperator() public view returns (address) {
         return operator;
     }
 }
