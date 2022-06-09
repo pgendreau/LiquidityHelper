@@ -24,18 +24,19 @@ contract LiquidityHelper is ILiquidityHelper {
     //3--ghst-kek (pid 4)
     //4--ghst-gltr (pid 7)
     address[] lpTokens;
-    uint256[] pools; // [1,2,3,4,7]
+    uint256[] pools = [1,2,3,4,7];
+    bool stakeGLTR;
 
     constructor(
         address _gltr,
         address[4] memory _alchemicaTokens,
         address[] memory _pairAddresses, //might be more than 4 pairs
-        uint256[] memory _pools,
         address _farmAddress,
         address _routerAddress,
         address _ghst,
         address _owner,
-        address _operator
+        address _operator,
+        bool _stakeGLTR
     ) {
         //approve ghst
         IERC20(_ghst).approve(_routerAddress, type(uint256).max);
@@ -73,12 +74,12 @@ contract LiquidityHelper is ILiquidityHelper {
         GLTR = _gltr;
         alchemicaTokens = _alchemicaTokens;
         lpTokens = _pairAddresses;
-        pools = _pools;
         farm = IMasterChef(_farmAddress);
         router = IUniswapV2Router01(_routerAddress);
         GHST = _ghst;
         owner = _owner;
         operator = _operator;
+        stakeGLTR = _stakeGLTR;
     }
 
     modifier onlyOwner() {
@@ -109,6 +110,10 @@ contract LiquidityHelper is ILiquidityHelper {
         operator = _newOperator;
     }
 
+    function setStakeGLTR(bool _stakeGLTR) external onlyOwner {
+        stakeGLTR = _stakeGLTR;
+    }
+
     function returnTokens(
         address[] calldata _tokens,
         uint256[] calldata _amounts
@@ -127,7 +132,7 @@ contract LiquidityHelper is ILiquidityHelper {
 
         for (uint256 i; i < lpTokens.length; i++) {
             pool = pools[i];
-            balance = stakingPoolBalance(pool).amount;
+            balance = getStakingPoolBalance(pool).amount;
             if (balance > 0) {
                 arg = UnStakePoolTokenArgs(
                     pool,
@@ -205,114 +210,90 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
-//    function distributeAlchemica() external  {
-//
-//    }
-
-//    function stakeGHSTForFrens() external  {
-//
-//    }
-
     function stakeAllAlchemicaTokens() external onlyOperatorOrOwner {
 
         for (uint256 i; i < alchemicaTokens.length; i++) {
 
-            SwapTokenForGHSTArgs memory swapArg = SwapTokenForGHSTArgs(
-                alchemicaTokens[i],
-                // swap half of the balance
-                IERC20(alchemicaTokens[i]).balanceOf(address(this))/2,
-                //fix to 1% slippage
-                0
-            );
-            swapTokenForGHST(swapArg);
+            uint256 initialTokenBalance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
 
-            //uint256 amountGHST = IERC20(GHST).balanceOf(address(this));
-            //uint256 amountAlchemica = IERC20(alchemicaTokens[i]).balanceOf(address(this));
-            //uint256 minAmountGHST = amountGHST - (amountGHST*1/100);
-            //uint256 minAmountAlchemica = amountAlchemica - (amountAlchemica*1/100);
-            AddLiquidityArgs memory poolArg = AddLiquidityArgs(
-                GHST,
-                alchemicaTokens[i],
-                IERC20(GHST).balanceOf(address(this)),
-                IERC20(alchemicaTokens[i]).balanceOf(address(this)),
-                0,
-                0
-                //minAmountGHST,
-                //minAmountAlchemica
-            );
-            addLiquidity(poolArg);
+            if (initialTokenBalance > 0) {
 
-            StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
-                i+1, // pools 1-4 = ghst-fud, ghst-fomo, ghst-alpha, ghst-kek 
-                IERC20(lpTokens[i]).balanceOf(address(this))
-            );
-            stakePoolToken(stakeArg);
+                // swap tokens for GHST
+                SwapTokenForGHSTArgs memory swapArg = SwapTokenForGHSTArgs(
+                    alchemicaTokens[i],
+                    // swap half of the balance
+                    initialTokenBalance/2,
+                    0
+                );
+                swapTokenForGHST(swapArg);
 
+                // pool tokens with GHST
+                uint256 amountGHST = IERC20(GHST).balanceOf(address(this));
+                uint256 amountAlchemica = IERC20(alchemicaTokens[i]).balanceOf(address(this));
+                // watch slippage (1% max)
+                uint256 minAmountGHST = amountGHST - (amountGHST*1/100);
+                uint256 minAmountAlchemica = amountAlchemica - (amountAlchemica*1/100);
+                AddLiquidityArgs memory poolArg = AddLiquidityArgs(
+                    GHST,
+                    alchemicaTokens[i],
+                    IERC20(GHST).balanceOf(address(this)),
+                    IERC20(alchemicaTokens[i]).balanceOf(address(this)),
+                    minAmountGHST,
+                    minAmountAlchemica
+                );
+                addLiquidity(poolArg);
+
+                // stake liquidity pool receipt for GLTR
+                StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
+                    i+1, // pools 1-4 = ghst-fud, ghst-fomo, ghst-alpha, ghst-kek 
+                    IERC20(lpTokens[i]).balanceOf(address(this))
+                );
+                stakePoolToken(stakeArg);
+                
+            }
+        }
+
+        if (stakeGLTR) {
+
+            batchClaimReward(pools);
+
+            uint256 initialGLTRBalance = IERC20(GLTR).balanceOf(address(this));
+
+            if (initialGLTRBalance > 0) {
+
+                // split GLTR for GHST
+                SwapTokenForGHSTArgs memory GLTRSwapArg = SwapTokenForGHSTArgs(
+                    GLTR,
+                    // swap half of the balance
+                    initialGLTRBalance/2,
+                    0
+                );
+                swapTokenForGHST(GLTRSwapArg);
+
+                // LP GHST-GLTR
+                AddLiquidityArgs memory GLTRPoolArg = AddLiquidityArgs(
+                    GHST,
+                    GLTR,
+                    IERC20(GHST).balanceOf(address(this)),
+                    IERC20(GLTR).balanceOf(address(this)),
+                    0,
+                    0
+                );
+                addLiquidity(GLTRPoolArg);
+
+                // stake LP receipt
+                StakePoolTokenArgs memory GLTRStakeArg = StakePoolTokenArgs(
+                    // 5th pair: ghst-gltr (pid 7)
+                    7,
+                    IERC20(lpTokens[4]).balanceOf(address(this))
+                );
+                stakePoolToken(GLTRStakeArg);
+
+            }
         }
     }
 
-    function batchSplitAllAlchemicaTokens() external onlyOperatorOrOwner {
-
-        SwapTokenForGHSTArgs[] memory args; 
-
-        for (uint256 i; i < alchemicaTokens.length; i++) {
-            SwapTokenForGHSTArgs memory arg = SwapTokenForGHSTArgs(
-                alchemicaTokens[i],
-                // swap half of the balance
-                IERC20(alchemicaTokens[i]).balanceOf(address(this))/2,
-                //fix to 1% slippage
-                0
-            );
-            args[i] = arg;
-        }
-
-        batchSwapTokenForGHST(args);
-            
-    }
-
-    function batchPoolAllAlchemicaTokens() external onlyOperatorOrOwner {
-
-        AddLiquidityArgs[] memory args; 
-
-        for (uint256 i; i < alchemicaTokens.length; i++) {
-            //uint256 amountGHST = IERC20(GHST).balanceOf(address(this));
-            //uint256 amountAlchemica = IERC20(alchemicaTokens[i]).balanceOf(address(this));
-            //uint256 minAmountGHST = amountGHST - (amountGHST*1/100);
-            //uint256 minAmountAlchemica = amountAlchemica - (amountAlchemica*1/100);
-            AddLiquidityArgs memory arg = AddLiquidityArgs(
-                GHST,
-                alchemicaTokens[i],
-                IERC20(GHST).balanceOf(address(this)),
-                IERC20(alchemicaTokens[i]).balanceOf(address(this)),
-                0,
-                0
-                //minAmountGHST,
-                //minAmountAlchemica
-            );
-            args[i] = arg;
-        }
-
-        batchAddLiquidity(args);
-
-    }
-
-    function batchStakeAllAlchemicaTokens() external onlyOperatorOrOwner {
-
-        StakePoolTokenArgs[] memory args; 
-
-        for (uint256 i; i < alchemicaTokens.length; i++) {
-            StakePoolTokenArgs memory arg = StakePoolTokenArgs(
-                i+1, // pools 1-4 = ghst-fud, ghst-fomo, ghst-alpha, ghst-kek 
-                IERC20(lpTokens[i]).balanceOf(address(this))
-            );
-            args[i] = arg;
-        }
-
-        batchStakePoolToken(args);
-
-    }
-
-    function stakingPoolBalance(uint256 _poolId)
+    function getStakingPoolBalance(uint256 _poolId)
         public
         view
         returns(IMasterChef.UserInfo memory ui)
@@ -332,7 +313,7 @@ contract LiquidityHelper is ILiquidityHelper {
         farm.harvest(_poolId);
     }
 
-    function batchClaimReward(uint256[] calldata _pools)
+    function batchClaimReward(uint256[] memory _pools)
         public
         onlyOwner
     {
@@ -409,11 +390,15 @@ contract LiquidityHelper is ILiquidityHelper {
         IERC20(_token).approve(_spender, type(uint256).max);
     }
 
-    function contractOwner() public view returns (address) {
+    function getContractOwner() public view returns (address) {
         return owner;
     }
 
-    function contractOperator() public view returns (address) {
+    function getStakeGLTR() public view returns (bool) {
+        return stakeGLTR;
+    }
+
+    function getContractOperator() public view returns (address) {
         return operator;
     }
 }

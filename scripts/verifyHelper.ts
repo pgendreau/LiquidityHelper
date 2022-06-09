@@ -22,18 +22,18 @@ async function verifyHelper(
         '0xBFad162775EBfB9988db3F24ef28CA6Bc2fB92f0',
         '0xb0E35478a389dD20050D66a67FB761678af99678',
       ],
-      [1,2,3,4,7],
       '0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c',
       '0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff',
       '0x385eeac5cb85a38a9a07a70c73e0a3271cfb54a7',
       owner,
       operator,
+      true,
     ],
   })
 }
 
 verifyHelper(
-  '0xE53119D5Cee52D4D8A56790561C2e218ad38E44c',
+  '0x9aA75b6191A14656Bb4EF93437d6E5Ecf331F81c',
   '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
   '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
 )
