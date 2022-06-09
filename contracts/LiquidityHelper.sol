@@ -245,11 +245,11 @@ contract LiquidityHelper is ILiquidityHelper {
 
                 // stake liquidity pool receipt for GLTR
                 StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
-                    i+1, // pools 1-4 = ghst-fud, ghst-fomo, ghst-alpha, ghst-kek 
+                    i+1, // pools 1-4 = ghst-fud, ghst-fomo, ghst-alpha, ghst-kek
                     IERC20(lpTokens[i]).balanceOf(address(this))
                 );
                 stakePoolToken(stakeArg);
-                
+
             }
         }
 
