@@ -121,6 +121,61 @@ contract LiquidityHelper is ILiquidityHelper {
         doStaking = _doStaking;
     }
 
+    function transferTokenFromOwner(address _token, uint256 _amount) public onlyOwner {
+
+        uint256 allowance = IERC20(_token).allowance(msg.sender, address(this));
+
+        require(allowance >= _amount, "Insufficient allowance");
+
+        require(
+            IERC20(_token).transferFrom(
+                msg.sender, 
+                address(this),
+                _amount
+            )
+        );
+    }
+
+    function transferAllPoolableTokensFromOwner() external onlyOwner {
+
+        for (uint256 i; i < alchemicaTokens.length; i++) {
+            uint256 balance = IERC20(alchemicaTokens[i]).balanceOf(msg.sender);
+            if (balance > 0) {
+                transferTokenFromOwner(alchemicaTokens[i], balance);
+            }
+        }
+
+        if (poolGLTR) {
+            uint256 balance = IERC20(GLTR).balanceOf(msg.sender);
+            if (balance > 0) {
+                transferTokenFromOwner(GLTR, balance);
+            }
+        }
+
+    }
+
+    function transferPercentageOfPoolableTokensFromOwner(uint256 _percent) external onlyOwner {
+
+        require(_percent > 0 && _percent < 100, "Percentage need to be between 1-99");
+
+        for (uint256 i; i < alchemicaTokens.length; i++) {
+            uint256 balance = IERC20(alchemicaTokens[i]).balanceOf(msg.sender);
+            if (balance > 0) {
+                uint256 amount = balance*_percent/100;
+                transferTokenFromOwner(alchemicaTokens[i], amount);
+            }
+        }
+
+        if (poolGLTR) {
+            uint256 balance = IERC20(GLTR).balanceOf(msg.sender);
+            if (balance > 0) {
+                uint256 amount = balance*_percent/100;
+                transferTokenFromOwner(GLTR, amount);
+            }
+        }
+
+    }
+
     function returnTokens(
         address[] calldata _tokens,
         uint256[] calldata _amounts
@@ -217,7 +272,7 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
-    function stakeAllAlchemicaTokens() external onlyOperatorOrOwner {
+    function processAllTokens() external onlyOperatorOrOwner {
 
         for (uint256 i; i < alchemicaTokens.length; i++) {
 
@@ -262,7 +317,7 @@ contract LiquidityHelper is ILiquidityHelper {
             }
         }
 
-        if (doStaking && poolGLTR) {
+        if (poolGLTR) {
 
             batchClaimReward(pools);
 
