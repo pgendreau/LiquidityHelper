@@ -264,6 +264,36 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    function swapAllTokensForGHST() external onlyOwner {
+        uint256 balance;
+        SwapTokenForGHSTArgs memory arg;
+        // swap alchemica
+        for (uint256 i; i < alchemicaTokens.length; i++) {
+            balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
+            if (balance > 0) {
+                // swap tokens for GHST
+                arg = SwapTokenForGHSTArgs(
+                    alchemicaTokens[i],
+                    // swap half of the balance
+                    balance,
+                    0
+                );
+                swapTokenForGHST(arg);
+            }
+        }
+        // swap GLTR
+        balance = IERC20(GLTR).balanceOf(address(this));
+        if (balance > 0) {
+            arg = SwapTokenForGHSTArgs(
+                GLTR,
+                // swap half of the balance
+                balance,
+                0
+            );
+            swapTokenForGHST(arg);
+        }
+    }
+
     function processAllTokens() external onlyOperatorOrOwner {
         for (uint256 i; i < alchemicaTokens.length; i++) {
             uint256 initialTokenBalance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
