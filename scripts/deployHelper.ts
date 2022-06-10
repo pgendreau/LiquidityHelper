@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 
 export async function deployHelper() {
+  const gltr = "0x3801C3B3B5c98F88a9c9005966AA96aa440B9Afc";
   const _alchemicaTokens: [string, string, string, string] = [
     "0x403E967b044d4Be25170310157cB1A4Bf10bdD0f",
     "0x44A6e0BE76e1D9620A7F76588e4509fE4fa8E8C8",
@@ -14,13 +15,13 @@ export async function deployHelper() {
     "0xBFad162775EBfB9988db3F24ef28CA6Bc2fB92f0",
     "0xb0E35478a389dD20050D66a67FB761678af99678",
   ];
-  const _stakeGLTR = true;
   const _masterChef = "0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c";
   const _quickswapRouter = "0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff";
   const ghst = "0x385eeac5cb85a38a9a07a70c73e0a3271cfb54a7";
-  const gltr = "0x3801C3B3B5c98F88a9c9005966AA96aa440B9Afc";
   const owner = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
   const operator = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
+  const _poolGLTR = true;
+  const _doStaking = true;
 
   const Helper = await ethers.getContractFactory("LiquidityHelper");
   const helper = await Helper.deploy(
@@ -32,7 +33,8 @@ export async function deployHelper() {
     ghst,
     owner,
     operator,
-    _stakeGLTR
+    _poolGLTR,
+    _doStaking
   );
 
   //@ts-ignore

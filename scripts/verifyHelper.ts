@@ -28,12 +28,13 @@ async function verifyHelper(
       owner,
       operator,
       true,
+      true,
     ],
   })
 }
 
 verifyHelper(
-  '0x9aA75b6191A14656Bb4EF93437d6E5Ecf331F81c',
+  '0x38b87368A0C6db945e4e857462B86EF65bA9FE64',
   '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
   '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
 )
