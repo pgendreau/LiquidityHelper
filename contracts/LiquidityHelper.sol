@@ -25,7 +25,8 @@ contract LiquidityHelper is ILiquidityHelper {
     //4--ghst-gltr (pid 7)
     address[] lpTokens;
     uint256[] pools = [1,2,3,4,7];
-    bool stakeGLTR;
+    bool poolGLTR;
+    bool doStaking;
 
     constructor(
         address _gltr,
@@ -36,7 +37,8 @@ contract LiquidityHelper is ILiquidityHelper {
         address _ghst,
         address _owner,
         address _operator,
-        bool _stakeGLTR
+        bool _poolGLTR,
+        bool _doStaking
     ) {
         //approve ghst
         IERC20(_ghst).approve(_routerAddress, type(uint256).max);
@@ -79,7 +81,8 @@ contract LiquidityHelper is ILiquidityHelper {
         GHST = _ghst;
         owner = _owner;
         operator = _operator;
-        stakeGLTR = _stakeGLTR;
+        poolGLTR = _poolGLTR;
+        doStaking = _doStaking;
     }
 
     modifier onlyOwner() {
@@ -110,8 +113,12 @@ contract LiquidityHelper is ILiquidityHelper {
         operator = _newOperator;
     }
 
-    function setStakeGLTR(bool _stakeGLTR) external onlyOwner {
-        stakeGLTR = _stakeGLTR;
+    function setPoolGLTR(bool _poolGLTR) external onlyOwner {
+        poolGLTR = _poolGLTR;
+    }
+
+    function setDoStaking(bool _doStaking) external onlyOwner {
+        doStaking = _doStaking;
     }
 
     function returnTokens(
@@ -243,17 +250,19 @@ contract LiquidityHelper is ILiquidityHelper {
                 );
                 addLiquidity(poolArg);
 
-                // stake liquidity pool receipt for GLTR
-                StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
-                    i+1, // pools 1-4 = ghst-fud, ghst-fomo, ghst-alpha, ghst-kek
-                    IERC20(lpTokens[i]).balanceOf(address(this))
-                );
-                stakePoolToken(stakeArg);
+                if (doStaking) {
+                    // stake liquidity pool receipt for GLTR
+                    StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
+                        i+1, // pools 1-4 = ghst-fud, ghst-fomo, ghst-alpha, ghst-kek
+                        IERC20(lpTokens[i]).balanceOf(address(this))
+                    );
+                    stakePoolToken(stakeArg);
+                }
 
             }
         }
 
-        if (stakeGLTR) {
+        if (doStaking && poolGLTR) {
 
             batchClaimReward(pools);
 
@@ -281,13 +290,15 @@ contract LiquidityHelper is ILiquidityHelper {
                 );
                 addLiquidity(GLTRPoolArg);
 
-                // stake LP receipt
-                StakePoolTokenArgs memory GLTRStakeArg = StakePoolTokenArgs(
-                    // 5th pair: ghst-gltr (pid 7)
-                    7,
-                    IERC20(lpTokens[4]).balanceOf(address(this))
-                );
-                stakePoolToken(GLTRStakeArg);
+                if (doStaking) {
+                    // stake LP receipt
+                    StakePoolTokenArgs memory GLTRStakeArg = StakePoolTokenArgs(
+                        // 5th pair: ghst-gltr (pid 7)
+                        7,
+                        IERC20(lpTokens[4]).balanceOf(address(this))
+                    );
+                    stakePoolToken(GLTRStakeArg);
+                }
 
             }
         }
@@ -394,8 +405,12 @@ contract LiquidityHelper is ILiquidityHelper {
         return owner;
     }
 
-    function getStakeGLTR() public view returns (bool) {
-        return stakeGLTR;
+    function getPoolGLTR() public view returns (bool) {
+        return poolGLTR;
+    }
+
+    function getDoStaking() public view returns (bool) {
+        return doStaking;
     }
 
     function getOperator() public view returns (address) {
