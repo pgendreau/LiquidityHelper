@@ -295,36 +295,44 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function processAllTokens() external onlyOperatorOrOwner {
+        SwapTokenForGHSTArgs memory swapArg;
+        AddLiquidityArgs memory poolArg;
+        StakePoolTokenArgs memory stakeArg;
+        uint256 balance;
+        uint256 amountA;
+        uint256 amountB;
+        uint256 minAmountA;
+        uint256 minAmountB;
         for (uint256 i; i < alchemicaTokens.length; i++) {
-            uint256 initialTokenBalance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
-            if (initialTokenBalance > 0) {
+            balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
+            if (balance > 0) {
                 // swap tokens for GHST
-                SwapTokenForGHSTArgs memory swapArg = SwapTokenForGHSTArgs(
+                swapArg = SwapTokenForGHSTArgs(
                     alchemicaTokens[i],
-                    // swap half of the balance
-                    initialTokenBalance/2,
+                    // swap half
+                    balance/2,
                     0
                 );
                 swapTokenForGHST(swapArg);
                 // pool tokens with GHST
-                uint256 amountGHST = IERC20(GHST).balanceOf(address(this));
-                uint256 amountAlchemica = IERC20(alchemicaTokens[i]).balanceOf(address(this));
+                amountA = IERC20(GHST).balanceOf(address(this));
+                amountB = IERC20(alchemicaTokens[i]).balanceOf(address(this));
                 // watch price variation (1% max)
-                uint256 minAmountGHST = amountGHST - (amountGHST/100);
-                uint256 minAmountAlchemica = amountAlchemica - (amountAlchemica/100);
-                AddLiquidityArgs memory poolArg = AddLiquidityArgs(
+                minAmountA = amountA-(amountA/100);
+                minAmountB = amountB-(amountB/100);
+                poolArg = AddLiquidityArgs(
                     GHST,
                     alchemicaTokens[i],
-                    IERC20(GHST).balanceOf(address(this)),
-                    IERC20(alchemicaTokens[i]).balanceOf(address(this)),
-                    minAmountGHST,
-                    minAmountAlchemica
+                    amountA,
+                    amountB,
+                    minAmountA,
+                    minAmountB
                 );
                 addLiquidity(poolArg);
                 // if staking pool tokens in contract
                 if (doStaking) {
                     // stake liquidity pool receipt for GLTR
-                    StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
+                    stakeArg = StakePoolTokenArgs(
                         i+1, // pools 1-4 = ghst-fud, ghst-fomo, ghst-alpha, ghst-kek
                         IERC20(lpTokens[i]).balanceOf(address(this))
                     );
@@ -336,35 +344,40 @@ contract LiquidityHelper is ILiquidityHelper {
         if (poolGLTR) {
             // get all GLTR first
             batchClaimReward(pools);
-            uint256 initialGLTRBalance = IERC20(GLTR).balanceOf(address(this));
-            if (initialGLTRBalance > 0) {
+            balance = IERC20(GLTR).balanceOf(address(this));
+            if (balance > 0) {
                 // split GLTR for GHST
-                SwapTokenForGHSTArgs memory GLTRSwapArg = SwapTokenForGHSTArgs(
+                swapArg = SwapTokenForGHSTArgs(
                     GLTR,
                     // swap half of the balance
-                    initialGLTRBalance/2,
+                    balance/2,
                     0
                 );
-                swapTokenForGHST(GLTRSwapArg);
-                // LP GHST-GLTR
-                AddLiquidityArgs memory GLTRPoolArg = AddLiquidityArgs(
+                swapTokenForGHST(swapArg);
+                // pool GLTR with GHST
+                amountA = IERC20(GHST).balanceOf(address(this));
+                amountB = IERC20(GLTR).balanceOf(address(this));
+                // watch price variation (1% max)
+                minAmountA = amountA-(amountA/100);
+                minAmountB = amountB-(amountB/100);
+                poolArg = AddLiquidityArgs(
                     GHST,
                     GLTR,
-                    IERC20(GHST).balanceOf(address(this)),
-                    IERC20(GLTR).balanceOf(address(this)),
-                    0,
-                    0
+                    amountA,
+                    amountB,
+                    minAmountA,
+                    minAmountB
                 );
-                addLiquidity(GLTRPoolArg);
+                addLiquidity(poolArg);
                 // if staking stake GLTR too
                 if (doStaking) {
                     // stake LP receipt
-                    StakePoolTokenArgs memory GLTRStakeArg = StakePoolTokenArgs(
+                    stakeArg = StakePoolTokenArgs(
                         // 5th pair: ghst-gltr (pid 7)
                         7,
                         IERC20(lpTokens[4]).balanceOf(address(this))
                     );
-                    stakePoolToken(GLTRStakeArg);
+                    stakePoolToken(stakeArg);
                 }
             }
         }
