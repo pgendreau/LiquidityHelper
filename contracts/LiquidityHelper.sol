@@ -293,8 +293,8 @@ contract LiquidityHelper is ILiquidityHelper {
                 uint256 amountGHST = IERC20(GHST).balanceOf(address(this));
                 uint256 amountAlchemica = IERC20(alchemicaTokens[i]).balanceOf(address(this));
                 // watch slippage (1% max)
-                uint256 minAmountGHST = amountGHST - (amountGHST*1/100);
-                uint256 minAmountAlchemica = amountAlchemica - (amountAlchemica*1/100);
+                uint256 minAmountGHST = amountGHST - (amountGHST/100);
+                uint256 minAmountAlchemica = amountAlchemica - (amountAlchemica/100);
                 AddLiquidityArgs memory poolArg = AddLiquidityArgs(
                     GHST,
                     alchemicaTokens[i],
