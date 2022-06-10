@@ -297,7 +297,6 @@ contract LiquidityHelper is ILiquidityHelper {
     function processAllTokens() external onlyOperatorOrOwner {
         SwapTokenForGHSTArgs memory swapArg;
         AddLiquidityArgs memory poolArg;
-        StakePoolTokenArgs memory stakeArg;
         uint256 balance;
         uint256 amountA;
         uint256 amountB;
@@ -332,7 +331,7 @@ contract LiquidityHelper is ILiquidityHelper {
                 // if staking pool tokens in contract
                 if (doStaking) {
                     // stake liquidity pool receipt for GLTR
-                    stakeArg = StakePoolTokenArgs(
+                    StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
                         i+1, // pools 1-4 = ghst-fud, ghst-fomo, ghst-alpha, ghst-kek
                         IERC20(lpTokens[i]).balanceOf(address(this))
                     );
@@ -372,7 +371,7 @@ contract LiquidityHelper is ILiquidityHelper {
                 // if staking stake GLTR too
                 if (doStaking) {
                     // stake LP receipt
-                    stakeArg = StakePoolTokenArgs(
+                    StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
                         // 5th pair: ghst-gltr (pid 7)
                         7,
                         IERC20(lpTokens[4]).balanceOf(address(this))
