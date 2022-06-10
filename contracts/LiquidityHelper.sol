@@ -62,7 +62,6 @@ contract LiquidityHelper is ILiquidityHelper {
                 )
             );
         }
-
         //approve pair Tokens for staking
         for (uint256 i; i < _pairAddresses.length; i++) {
             require(
@@ -72,7 +71,6 @@ contract LiquidityHelper is ILiquidityHelper {
                 )
             );
         }
-
         GLTR = _gltr;
         alchemicaTokens = _alchemicaTokens;
         lpTokens = _pairAddresses;
@@ -122,11 +120,8 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function transferTokenFromOwner(address _token, uint256 _amount) public onlyOwner {
-
         uint256 allowance = IERC20(_token).allowance(msg.sender, address(this));
-
         require(allowance >= _amount, "Insufficient allowance");
-
         require(
             IERC20(_token).transferFrom(
                 msg.sender, 
@@ -137,43 +132,43 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function transferAllPoolableTokensFromOwner() external onlyOwner {
-
+        uint256 balance;
+        // transfer alchemica
         for (uint256 i; i < alchemicaTokens.length; i++) {
-            uint256 balance = IERC20(alchemicaTokens[i]).balanceOf(msg.sender);
+            balance = IERC20(alchemicaTokens[i]).balanceOf(msg.sender);
             if (balance > 0) {
                 transferTokenFromOwner(alchemicaTokens[i], balance);
             }
         }
-
+        // transfer GLTR if to be pooled
         if (poolGLTR) {
-            uint256 balance = IERC20(GLTR).balanceOf(msg.sender);
+            balance = IERC20(GLTR).balanceOf(msg.sender);
             if (balance > 0) {
                 transferTokenFromOwner(GLTR, balance);
             }
         }
-
     }
 
     function transferPercentageOfPoolableTokensFromOwner(uint256 _percent) external onlyOwner {
-
         require(_percent > 0 && _percent < 100, "Percentage need to be between 1-99");
-
+        uint256 balance;
+        uint256 amount;
+        // transfer alchemica
         for (uint256 i; i < alchemicaTokens.length; i++) {
-            uint256 balance = IERC20(alchemicaTokens[i]).balanceOf(msg.sender);
+            balance = IERC20(alchemicaTokens[i]).balanceOf(msg.sender);
             if (balance > 0) {
-                uint256 amount = balance*_percent/100;
+                amount = balance*_percent/100;
                 transferTokenFromOwner(alchemicaTokens[i], amount);
             }
         }
-
+        // transfer GLTR if to be pooled
         if (poolGLTR) {
-            uint256 balance = IERC20(GLTR).balanceOf(msg.sender);
+            balance = IERC20(GLTR).balanceOf(msg.sender);
             if (balance > 0) {
-                uint256 amount = balance*_percent/100;
+                amount = balance*_percent/100;
                 transferTokenFromOwner(GLTR, amount);
             }
         }
-
     }
 
     function returnTokens(
@@ -187,11 +182,9 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function unstakeAllPools() public {
-
         uint256 pool;
         uint256 balance;
         UnStakePoolTokenArgs memory arg;
-
         for (uint256 i; i < lpTokens.length; i++) {
             pool = pools[i];
             balance = getStakingPoolBalance(pool).amount;
@@ -206,28 +199,27 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function returnAllTokens() external {
-
+        // unstake and claim from GLTR pools
         unstakeAllPools();
-
         uint256 balance;
-
+        // return GHST
         balance = IERC20(GHST).balanceOf(address(this));
         if (balance > 0) {
             require(IERC20(GHST).transfer(owner, balance));
         }
-
+        // return GLTR
         balance = IERC20(GLTR).balanceOf(address(this));
         if (balance > 0) {
             require(IERC20(GLTR).transfer(owner, balance));
         }
-
+        // return alchemica
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
             if (balance > 0) {
                 require(IERC20(alchemicaTokens[i]).transfer(owner, balance));
             }
         }
-
+        // return lp tokens
         for (uint256 i; i < lpTokens.length; i++) {
             balance = IERC20(lpTokens[i]).balanceOf(address(this));
             if (balance > 0) {
@@ -273,13 +265,9 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function processAllTokens() external onlyOperatorOrOwner {
-
         for (uint256 i; i < alchemicaTokens.length; i++) {
-
             uint256 initialTokenBalance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
-
             if (initialTokenBalance > 0) {
-
                 // swap tokens for GHST
                 SwapTokenForGHSTArgs memory swapArg = SwapTokenForGHSTArgs(
                     alchemicaTokens[i],
@@ -288,11 +276,10 @@ contract LiquidityHelper is ILiquidityHelper {
                     0
                 );
                 swapTokenForGHST(swapArg);
-
                 // pool tokens with GHST
                 uint256 amountGHST = IERC20(GHST).balanceOf(address(this));
                 uint256 amountAlchemica = IERC20(alchemicaTokens[i]).balanceOf(address(this));
-                // watch slippage (1% max)
+                // watch price variation (1% max)
                 uint256 minAmountGHST = amountGHST - (amountGHST/100);
                 uint256 minAmountAlchemica = amountAlchemica - (amountAlchemica/100);
                 AddLiquidityArgs memory poolArg = AddLiquidityArgs(
@@ -304,7 +291,7 @@ contract LiquidityHelper is ILiquidityHelper {
                     minAmountAlchemica
                 );
                 addLiquidity(poolArg);
-
+                // if staking pool tokens in contract
                 if (doStaking) {
                     // stake liquidity pool receipt for GLTR
                     StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
@@ -313,18 +300,14 @@ contract LiquidityHelper is ILiquidityHelper {
                     );
                     stakePoolToken(stakeArg);
                 }
-
             }
         }
-
+        // if pooling GLTR with GHST
         if (poolGLTR) {
-
+            // get all GLTR first
             batchClaimReward(pools);
-
             uint256 initialGLTRBalance = IERC20(GLTR).balanceOf(address(this));
-
             if (initialGLTRBalance > 0) {
-
                 // split GLTR for GHST
                 SwapTokenForGHSTArgs memory GLTRSwapArg = SwapTokenForGHSTArgs(
                     GLTR,
@@ -333,7 +316,6 @@ contract LiquidityHelper is ILiquidityHelper {
                     0
                 );
                 swapTokenForGHST(GLTRSwapArg);
-
                 // LP GHST-GLTR
                 AddLiquidityArgs memory GLTRPoolArg = AddLiquidityArgs(
                     GHST,
@@ -344,7 +326,7 @@ contract LiquidityHelper is ILiquidityHelper {
                     0
                 );
                 addLiquidity(GLTRPoolArg);
-
+                // if staking stake GLTR too
                 if (doStaking) {
                     // stake LP receipt
                     StakePoolTokenArgs memory GLTRStakeArg = StakePoolTokenArgs(
@@ -354,7 +336,6 @@ contract LiquidityHelper is ILiquidityHelper {
                     );
                     stakePoolToken(GLTRStakeArg);
                 }
-
             }
         }
     }
@@ -368,7 +349,6 @@ contract LiquidityHelper is ILiquidityHelper {
             _poolId,
             address(this)
         );
-
         return (ui);
     }
 
