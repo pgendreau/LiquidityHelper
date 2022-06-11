@@ -30,6 +30,7 @@ contract LiquidityHelper is ILiquidityHelper {
     address operator;
     bool poolGLTR = true;
     bool doStaking = true;
+    uint256 minAmount = 0;
     uint256 singleGHSTPercent = 0;
 
     constructor(
@@ -107,9 +108,44 @@ contract LiquidityHelper is ILiquidityHelper {
         _;
     }
 
-    function transferOwnership(address _owner) external onlyOwner {
-        assert(_owner != address(0));
-        owner = _owner;
+    function getStakingPoolBalance(uint256 _poolId)
+        public
+        view
+        returns(IMasterChef.UserInfo memory ui)
+    {
+        ui = farm.userInfo(
+            _poolId,
+            address(this)
+        );
+        return (ui);
+    }
+
+    function getContractOwner() external view returns (address) {
+        return owner;
+    }
+
+    function getPoolGLTR() external view returns (bool) {
+        return poolGLTR;
+    }
+
+    function getDoStaking() external view returns (bool) {
+        return doStaking;
+    }
+
+    function getOperator() external view returns (address) {
+        return operator;
+    }
+
+    function getMinAmount() external view returns (uint256) {
+        return minAmount;
+    }
+
+    function getSingleGHSTPercent() external view returns (uint256) {
+        return singleGHSTPercent;
+    }
+
+    function setApproval(address _token, address _spender) public onlyOwner {
+        require(IERC20(_token).approve(_spender, type(uint256).max));
     }
 
     function setOperator(address _operator) external onlyOwner {
@@ -125,9 +161,18 @@ contract LiquidityHelper is ILiquidityHelper {
         doStaking = _doStaking;
     }
 
+    function setMinAmount(uint256 _amount) external onlyOwner {
+        minAmount = _amount;
+    }
+
     function setSingleGHSTPercent(uint256 _percent) external onlyOwner {
         require(_percent >= 0 && _percent < 100, "Percentage should between 1-99 or 0 to disable");
         singleGHSTPercent = _percent;
+    }
+
+    function transferOwnership(address _owner) external onlyOwner {
+        assert(_owner != address(0));
+        owner = _owner;
     }
 
     function transferTokenFromOwner(address _token, uint256 _amount) public onlyOwner {
@@ -140,6 +185,132 @@ contract LiquidityHelper is ILiquidityHelper {
                 _amount
             )
         );
+    }
+
+    function returnTokens(
+        address[] calldata _tokens,
+        uint256[] calldata _amounts
+    ) external onlyOwner {
+        if (_tokens.length != _amounts.length) revert LengthMismatch();
+        for (uint256 i; i < _tokens.length; i++) {
+            require(IERC20(_tokens[i]).transfer(owner, _amounts[i]));
+        }
+    }
+
+    function stakePoolToken(StakePoolTokenArgs memory _args)
+        public
+        onlyOperatorOrOwner
+    {
+        farm.deposit(
+            _args._poolId,
+            _args._amount
+        );
+    }
+
+    function batchStakePoolToken(StakePoolTokenArgs[] memory _args)
+        public 
+    {
+        for (uint256 i; i < _args.length; i++) {
+            stakePoolToken(_args[i]);
+        }
+    }
+
+    function unStakePoolToken(UnStakePoolTokenArgs memory _args)
+        public
+        onlyOwner 
+    {
+        farm.withdraw(
+            _args._poolId,
+            _args._amount
+        );
+    }
+
+    function batchUnStakePoolToken(UnStakePoolTokenArgs[] memory _args)
+        external
+    {
+        for (uint256 i; i < _args.length; i++) {
+            unStakePoolToken(_args[i]);
+        }
+    }
+
+    function claimReward(uint256 _poolId)
+        public
+        onlyOwner
+    {
+        farm.harvest(_poolId);
+    }
+
+    function batchClaimReward(uint256[] memory _pools)
+        public
+        onlyOwner
+    {
+        farm.batchHarvest(_pools);
+    }
+
+    function swapTokenForGHST(SwapTokenForGHSTArgs memory _args)
+        public
+        onlyOperatorOrOwner
+    {
+        address[] memory path = new address[](2);
+            path[0] = _args._token;
+            path[1] = GHST;
+        router.swapExactTokensForTokens(
+            _args._amount,
+            _args._amountMin,
+            path,
+            address(this),
+            block.timestamp + 3000
+        );
+    }
+
+    function batchSwapTokenForGHST(SwapTokenForGHSTArgs[] memory _args)
+        public 
+    {
+        for (uint256 i; i < _args.length; i++) {
+            swapTokenForGHST(_args[i]);
+        }
+    }
+
+    function addLiquidity(AddLiquidityArgs memory _args) public onlyOperatorOrOwner {
+        router.addLiquidity(
+            _args._tokenA,
+            _args._tokenB,
+            _args._amountADesired,
+            _args._amountBDesired,
+            _args._amountAMin,
+            _args._amountBMin,
+            address(this),
+            block.timestamp + 3000
+        );
+    }
+
+    function batchAddLiquidity(AddLiquidityArgs[] memory _args) public {
+        for (uint256 i; i < _args.length; i++) {
+            addLiquidity(_args[i]);
+        }
+    }
+
+    function removeLiquidity(RemoveLiquidityArgs calldata _args)
+        public
+        onlyOwner
+    {
+        router.removeLiquidity(
+            _args._tokenA,
+            _args._tokenB,
+            _args._liquidity,
+            _args._amountAMin,
+            _args._amountBMin,
+            address(this),
+            block.timestamp + 3000
+        );
+    }
+
+    function batchRemoveLiquidity(RemoveLiquidityArgs[] calldata _args)
+        external
+    {
+        for (uint256 i; i < _args.length; i++) {
+            removeLiquidity(_args[i]);
+        }
     }
 
     function transferAllPoolableTokensFromOwner() external onlyOwner {
@@ -160,7 +331,7 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
-    function transferPercentageOfPoolableTokensFromOwner(uint256 _percent) external onlyOwner {
+    function transferPercentageOfAllPoolableTokensFromOwner(uint256 _percent) external onlyOwner {
         require(_percent > 0 && _percent < 100, "Percentage need to be between 1-99");
         uint256 balance;
         uint256 amount;
@@ -179,16 +350,6 @@ contract LiquidityHelper is ILiquidityHelper {
                 amount = balance*_percent/100;
                 transferTokenFromOwner(GLTR, amount);
             }
-        }
-    }
-
-    function returnTokens(
-        address[] calldata _tokens,
-        uint256[] calldata _amounts
-    ) external onlyOwner {
-        if (_tokens.length != _amounts.length) revert LengthMismatch();
-        for (uint256 i; i < _tokens.length; i++) {
-            require(IERC20(_tokens[i]).transfer(owner, _amounts[i]));
         }
     }
 
@@ -241,42 +402,6 @@ contract LiquidityHelper is ILiquidityHelper {
             if (balance > 0) {
                 require(IERC20(lpTokens[i]).transfer(owner, balance));
             }
-        }
-    }
-
-    function stakePoolToken(StakePoolTokenArgs memory _args)
-        public
-        onlyOperatorOrOwner
-    {
-        farm.deposit(
-            _args._poolId,
-            _args._amount
-        );
-    }
-
-    function batchStakePoolToken(StakePoolTokenArgs[] memory _args)
-        public 
-    {
-        for (uint256 i; i < _args.length; i++) {
-            stakePoolToken(_args[i]);
-        }
-    }
-
-    function unStakePoolToken(UnStakePoolTokenArgs memory _args)
-        public
-        onlyOwner 
-    {
-        farm.withdraw(
-            _args._poolId,
-            _args._amount
-        );
-    }
-
-    function batchUnStakePoolToken(UnStakePoolTokenArgs[] memory _args)
-        external
-    {
-        for (uint256 i; i < _args.length; i++) {
-            unStakePoolToken(_args[i]);
         }
     }
 
@@ -421,121 +546,5 @@ contract LiquidityHelper is ILiquidityHelper {
                 }
             }
         }
-    }
-
-    function getStakingPoolBalance(uint256 _poolId)
-        public
-        view
-        returns(IMasterChef.UserInfo memory ui)
-    {
-        ui = farm.userInfo(
-            _poolId,
-            address(this)
-        );
-        return (ui);
-    }
-
-    function claimReward(uint256 _poolId)
-        public
-        onlyOwner
-    {
-        farm.harvest(_poolId);
-    }
-
-    function batchClaimReward(uint256[] memory _pools)
-        public
-        onlyOwner
-    {
-        farm.batchHarvest(_pools);
-    }
-
-    function swapTokenForGHST(SwapTokenForGHSTArgs memory _args)
-        public
-        onlyOperatorOrOwner
-    {
-        address[] memory path = new address[](2);
-            path[0] = _args._token;
-            path[1] = GHST;
-        router.swapExactTokensForTokens(
-            _args._amount,
-            _args._amountMin,
-            path,
-            address(this),
-            block.timestamp + 3000
-        );
-    }
-
-    function batchSwapTokenForGHST(SwapTokenForGHSTArgs[] memory _args)
-        public 
-    {
-        for (uint256 i; i < _args.length; i++) {
-            swapTokenForGHST(_args[i]);
-        }
-    }
-
-    function addLiquidity(AddLiquidityArgs memory _args) public onlyOperatorOrOwner {
-        router.addLiquidity(
-            _args._tokenA,
-            _args._tokenB,
-            _args._amountADesired,
-            _args._amountBDesired,
-            _args._amountAMin,
-            _args._amountBMin,
-            address(this),
-            block.timestamp + 3000
-        );
-    }
-
-    function withdrawLiquidity(RemoveLiquidityArgs calldata _args)
-        public
-        onlyOwner
-    {
-        router.removeLiquidity(
-            _args._tokenA,
-            _args._tokenB,
-            _args._liquidity,
-            _args._amountAMin,
-            _args._amountBMin,
-            address(this),
-            block.timestamp + 3000
-        );
-    }
-
-    function batchAddLiquidity(AddLiquidityArgs[] memory _args) public {
-        for (uint256 i; i < _args.length; i++) {
-            addLiquidity(_args[i]);
-        }
-    }
-
-    function batchRemoveLiquidity(RemoveLiquidityArgs[] calldata _args)
-        external
-    {
-        for (uint256 i; i < _args.length; i++) {
-            withdrawLiquidity(_args[i]);
-        }
-    }
-
-    function setApproval(address _token, address _spender) public onlyOwner {
-        require(IERC20(_token).approve(_spender, type(uint256).max));
-    }
-
-    function getContractOwner() public view returns (address) {
-        return owner;
-    }
-
-    function getPoolGLTR() public view returns (bool) {
-        return poolGLTR;
-    }
-
-    function getDoStaking() public view returns (bool) {
-        return doStaking;
-    }
-
-    function getOperator() public view returns (address) {
-        return operator;
-    }
-
-    function getSingleGHSTPercent() public view returns (uint256) {
-        return singleGHSTPercent;
     }
 }
