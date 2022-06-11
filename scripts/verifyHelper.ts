@@ -25,6 +25,7 @@ async function verifyHelper(
       '0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c',
       '0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff',
       '0x385eeac5cb85a38a9a07a70c73e0a3271cfb54a7',
+      '0x73958d46B7aA2bc94926d8a215Fa560A5CdCA3eA',
       owner,
       operator,
     ],
