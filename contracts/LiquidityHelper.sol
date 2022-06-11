@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.13;
 import "../interfaces/IERC20.sol";
+import "../interfaces/IWrappedAToken.sol";
 import "../interfaces/IUniswapV2Router01.sol";
 import "../interfaces/ILiquidityHelper.sol";
 import "../interfaces/IMasterChef.sol";
 
 contract LiquidityHelper is ILiquidityHelper {
     error LengthMismatch();
-    uint256[] pools = [1,2,3,4,7];
+    // pool 0 is single wapGHST staking
+    uint256[] pools = [0,1,2,3,4,7];
     address GLTR;
     //0--fud
     //1--fomo
@@ -26,8 +28,9 @@ contract LiquidityHelper is ILiquidityHelper {
     address wapGHST;
     address owner;
     address operator;
-    bool poolGLTR;
-    bool doStaking;
+    bool poolGLTR = true;
+    bool doStaking = true;
+    uint256 singleGHSTPercent = 0;
 
     constructor(
         address _gltr,
@@ -38,17 +41,15 @@ contract LiquidityHelper is ILiquidityHelper {
         address _ghst,
         address _wrappedGhst,
         address _owner,
-        address _operator,
-        bool _poolGLTR,
-        bool _doStaking
+        address _operator
     ) {
         //approve GHST for deposit and wrap
-        IERC20(_ghst).approve(_routerAddress, type(uint256).max);
-        IERC20(_ghst).approve(_wrappedGhst, type(uint256).max);
+        require(IERC20(_ghst).approve(_routerAddress, type(uint256).max));
+        require(IERC20(_ghst).approve(_wrappedGhst, type(uint256).max));
         //approve wapGHST deposit
-        IERC20(_wrappedGhst).approve(_routerAddress, type(uint256).max);
+        require(IERC20(_wrappedGhst).approve(_routerAddress, type(uint256).max));
         //approve GLTR for deposit
-        IERC20(_gltr).approve(_routerAddress, type(uint256).max);
+        require(IERC20(_gltr).approve(_routerAddress, type(uint256).max));
         //approve alchemica for deposit
         for (uint256 i; i < _alchemicaTokens.length; i++) {
             require(
@@ -85,8 +86,6 @@ contract LiquidityHelper is ILiquidityHelper {
         wapGHST = _wrappedGhst;
         owner = _owner;
         operator = _operator;
-        poolGLTR = _poolGLTR;
-        doStaking = _doStaking;
     }
 
     modifier onlyOwner() {
@@ -107,14 +106,14 @@ contract LiquidityHelper is ILiquidityHelper {
         _;
     }
 
-    function transferOwnership(address _newOwner) external onlyOwner {
-        assert(_newOwner != address(0));
-        owner = _newOwner;
+    function transferOwnership(address _owner) external onlyOwner {
+        assert(_owner != address(0));
+        owner = _owner;
     }
 
-    function setOperator(address _newOperator) external onlyOwner {
-        assert(_newOperator != address(0));
-        operator = _newOperator;
+    function setOperator(address _operator) external onlyOwner {
+        assert(_operator != address(0));
+        operator = _operator;
     }
 
     function setPoolGLTR(bool _poolGLTR) external onlyOwner {
@@ -123,6 +122,11 @@ contract LiquidityHelper is ILiquidityHelper {
 
     function setDoStaking(bool _doStaking) external onlyOwner {
         doStaking = _doStaking;
+    }
+
+    function setSingleGHSTPercent(uint256 _percent) external onlyOwner {
+        require(_percent >= 0 && _percent < 100, "Percentage should between 1-99 or 0 to disable");
+        singleGHSTPercent = _percent;
     }
 
     function transferTokenFromOwner(address _token, uint256 _amount) public onlyOwner {
@@ -270,6 +274,28 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    function swapPercentageOfAllAlchemicaTokensForGHST(uint256 _percent) public onlyOperatorOrOwner {
+        require(_percent > 0 && _percent < 100, "Percentage need to be between 1-99");
+        uint256 balance;
+        uint256 amount;
+        SwapTokenForGHSTArgs memory arg;
+        // swap all alchemica tokens
+        for (uint256 i; i < alchemicaTokens.length; i++) {
+            balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
+            if (balance > 0) {
+                amount = balance*_percent/100;
+                // swap tokens for GHST
+                arg = SwapTokenForGHSTArgs(
+                    alchemicaTokens[i],
+                    // swap half of the balance
+                    amount,
+                    0
+                );
+                swapTokenForGHST(arg);
+            }
+        }
+    }
+
     function swapAllTokensForGHST() external onlyOwner {
         uint256 balance;
         SwapTokenForGHSTArgs memory arg;
@@ -304,6 +330,22 @@ contract LiquidityHelper is ILiquidityHelper {
         SwapTokenForGHSTArgs memory swapArg;
         AddLiquidityArgs memory poolArg;
         uint256 balance;
+        if (singleGHSTPercent > 0) {
+            // swap alchemica for single staking first
+            swapPercentageOfAllAlchemicaTokensForGHST(singleGHSTPercent);
+            // wrap GHST
+            IWrappedAToken(wapGHST).enterWithUnderlying(IERC20(GHST).balanceOf(address(this)));
+            // stake GHST
+            if (doStaking) {
+                StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
+                    0, // pool 0 = single staking wapGHST for gltr
+                    IERC20(wapGHST).balanceOf(address(this))
+                );
+                stakePoolToken(stakeArg);
+            }
+        }
+
+        // pool (and stake) all the alchemica that is left
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
             if (balance > 0) {
@@ -467,7 +509,7 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function setApproval(address _token, address _spender) public onlyOwner {
-        IERC20(_token).approve(_spender, type(uint256).max);
+        require(IERC20(_token).approve(_spender, type(uint256).max));
     }
 
     function getContractOwner() public view returns (address) {
@@ -484,5 +526,9 @@ contract LiquidityHelper is ILiquidityHelper {
 
     function getOperator() public view returns (address) {
         return operator;
+    }
+
+    function getSingleGHSTPercent() public view returns (uint256) {
+        return singleGHSTPercent;
     }
 }
