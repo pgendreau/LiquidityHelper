@@ -39,16 +39,16 @@ contract LiquidityHelper is ILiquidityHelper {
         address _farmAddress,
         address _routerAddress,
         address _ghst,
-        address _wrappedGhst,
+        address _wrappedAmGhst,
         address _owner,
         address _operator
     ) {
         //approve GHST for deposit and wrap
         require(IERC20(_ghst).approve(_routerAddress, type(uint256).max));
-        require(IERC20(_ghst).approve(_wrappedGhst, type(uint256).max));
+        require(IERC20(_ghst).approve(_wrappedAmGhst, type(uint256).max));
         //approve wapGHST for deposit and staking
-        require(IERC20(_wrappedGhst).approve(_routerAddress, type(uint256).max));
-        require(IERC20(_wrappedGhst).approve(_farmAddress, type(uint256).max));
+        require(IERC20(_wrappedAmGhst).approve(_routerAddress, type(uint256).max));
+        require(IERC20(_wrappedAmGhst).approve(_farmAddress, type(uint256).max));
         //approve GLTR for deposit
         require(IERC20(_gltr).approve(_routerAddress, type(uint256).max));
         //approve alchemica for deposit
@@ -84,7 +84,7 @@ contract LiquidityHelper is ILiquidityHelper {
         farm = IMasterChef(_farmAddress);
         router = IUniswapV2Router01(_routerAddress);
         GHST = _ghst;
-        wapGHST = _wrappedGhst;
+        wapGHST = _wrappedAmGhst;
         owner = _owner;
         operator = _operator;
     }
@@ -196,7 +196,7 @@ contract LiquidityHelper is ILiquidityHelper {
         uint256 pool;
         uint256 balance;
         UnStakePoolTokenArgs memory arg;
-        for (uint256 i; i < lpTokens.length; i++) {
+        for (uint256 i; i < pools.length; i++) {
             pool = pools[i];
             balance = getStakingPoolBalance(pool).amount;
             if (balance > 0) {
@@ -217,6 +217,11 @@ contract LiquidityHelper is ILiquidityHelper {
         balance = IERC20(GHST).balanceOf(address(this));
         if (balance > 0) {
             require(IERC20(GHST).transfer(owner, balance));
+        }
+        // return wapGHST
+        balance = IERC20(wapGHST).balanceOf(address(this));
+        if (balance > 0) {
+            require(IERC20(wapGHST).transfer(owner, balance));
         }
         // return GLTR
         balance = IERC20(GLTR).balanceOf(address(this));
