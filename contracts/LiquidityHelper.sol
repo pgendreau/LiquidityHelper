@@ -46,8 +46,9 @@ contract LiquidityHelper is ILiquidityHelper {
         //approve GHST for deposit and wrap
         require(IERC20(_ghst).approve(_routerAddress, type(uint256).max));
         require(IERC20(_ghst).approve(_wrappedGhst, type(uint256).max));
-        //approve wapGHST deposit
+        //approve wapGHST for deposit and staking
         require(IERC20(_wrappedGhst).approve(_routerAddress, type(uint256).max));
+        require(IERC20(_wrappedGhst).approve(_farmAddress, type(uint256).max));
         //approve GLTR for deposit
         require(IERC20(_gltr).approve(_routerAddress, type(uint256).max));
         //approve alchemica for deposit
@@ -278,22 +279,23 @@ contract LiquidityHelper is ILiquidityHelper {
         require(_percent > 0 && _percent < 100, "Percentage need to be between 1-99");
         uint256 balance;
         uint256 amount;
-        SwapTokenForGHSTArgs memory arg;
+        SwapTokenForGHSTArgs[] memory args;
         // swap all alchemica tokens
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
             if (balance > 0) {
                 amount = balance*_percent/100;
                 // swap tokens for GHST
-                arg = SwapTokenForGHSTArgs(
+                SwapTokenForGHSTArgs memory arg = SwapTokenForGHSTArgs(
                     alchemicaTokens[i],
                     // swap half of the balance
                     amount,
                     0
                 );
-                swapTokenForGHST(arg);
+                args[i] = arg;
             }
         }
+        batchSwapTokenForGHST(args);
     }
 
     function swapAllTokensForGHST() external onlyOwner {
