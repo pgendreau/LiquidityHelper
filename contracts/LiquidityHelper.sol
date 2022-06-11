@@ -7,24 +7,25 @@ import "../interfaces/IMasterChef.sol";
 
 contract LiquidityHelper is ILiquidityHelper {
     error LengthMismatch();
-    IUniswapV2Router01 router;
-    IMasterChef farm;
-    address GHST;
-    address owner;
-    address operator;
+    uint256[] pools = [1,2,3,4,7];
+    address GLTR;
     //0--fud
     //1--fomo
     //2--alpha
     //3--kek
     address[4] alchemicaTokens;
-    address GLTR;
     //0--ghst-fud (pid 1)
     //1--ghst-fomo (pid 2)
     //2--ghst-alpha (pid 3)
     //3--ghst-kek (pid 4)
     //4--ghst-gltr (pid 7)
     address[] lpTokens;
-    uint256[] pools = [1,2,3,4,7];
+    IMasterChef farm;
+    IUniswapV2Router01 router;
+    address GHST;
+    address wapGHST;
+    address owner;
+    address operator;
     bool poolGLTR;
     bool doStaking;
 
@@ -35,16 +36,20 @@ contract LiquidityHelper is ILiquidityHelper {
         address _farmAddress,
         address _routerAddress,
         address _ghst,
+        address _wrappedGhst,
         address _owner,
         address _operator,
         bool _poolGLTR,
         bool _doStaking
     ) {
-        //approve ghst
+        //approve GHST for deposit and wrap
         IERC20(_ghst).approve(_routerAddress, type(uint256).max);
-        //approve gltr
+        IERC20(_ghst).approve(_wrappedGhst, type(uint256).max);
+        //approve wapGHST deposit
+        IERC20(_wrappedGhst).approve(_routerAddress, type(uint256).max);
+        //approve GLTR for deposit
         IERC20(_gltr).approve(_routerAddress, type(uint256).max);
-        //approve alchemica infinitely
+        //approve alchemica for deposit
         for (uint256 i; i < _alchemicaTokens.length; i++) {
             require(
                 IERC20(_alchemicaTokens[i]).approve(
@@ -53,7 +58,7 @@ contract LiquidityHelper is ILiquidityHelper {
                 )
             );
         }
-        //approve pair Tokens
+        //approve lp tokens for withdrawal
         for (uint256 i; i < _pairAddresses.length; i++) {
             require(
                 IERC20(_pairAddresses[i]).approve(
@@ -62,7 +67,7 @@ contract LiquidityHelper is ILiquidityHelper {
                 )
             );
         }
-        //approve pair Tokens for staking
+        //approve lp tokens for staking
         for (uint256 i; i < _pairAddresses.length; i++) {
             require(
                 IERC20(_pairAddresses[i]).approve(
@@ -77,6 +82,7 @@ contract LiquidityHelper is ILiquidityHelper {
         farm = IMasterChef(_farmAddress);
         router = IUniswapV2Router01(_routerAddress);
         GHST = _ghst;
+        wapGHST = _wrappedGhst;
         owner = _owner;
         operator = _operator;
         poolGLTR = _poolGLTR;

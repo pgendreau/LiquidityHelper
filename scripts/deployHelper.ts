@@ -18,6 +18,7 @@ export async function deployHelper() {
   const _masterChef = "0x1fE64677Ab1397e20A1211AFae2758570fEa1B8c";
   const _quickswapRouter = "0xa5e0829caced8ffdd4de3c43696c57f7d7a678ff";
   const ghst = "0x385eeac5cb85a38a9a07a70c73e0a3271cfb54a7";
+  const wapGhst = "0x73958d46B7aA2bc94926d8a215Fa560A5CdCA3eA";
   const owner = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
   const operator = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
   const _poolGLTR = true;
@@ -31,6 +32,7 @@ export async function deployHelper() {
     _masterChef,
     _quickswapRouter,
     ghst,
+    wapGhst,
     owner,
     operator,
     _poolGLTR,
