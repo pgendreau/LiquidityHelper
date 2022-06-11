@@ -310,14 +310,11 @@ contract LiquidityHelper is ILiquidityHelper {
                 );
                 swapTokenForGHST(swapArg);
                 // pool tokens with GHST
-                amountA = IERC20(GHST).balanceOf(address(this));
-                amountB = IERC20(alchemicaTokens[i]).balanceOf(address(this));
-                // watch price variation (1% max)
                 poolArg = AddLiquidityArgs(
                     GHST,
                     alchemicaTokens[i],
-                    amountA,
-                    amountB,
+                    IERC20(GHST).balanceOf(address(this)),
+                    IERC20(alchemicaTokens[i]).balanceOf(address(this)),
                     0,
                     0
                 );
@@ -348,14 +345,11 @@ contract LiquidityHelper is ILiquidityHelper {
                 );
                 swapTokenForGHST(swapArg);
                 // pool GLTR with GHST
-                amountA = IERC20(GHST).balanceOf(address(this));
-                amountB = IERC20(GLTR).balanceOf(address(this));
-                // watch price variation (1% max)
                 poolArg = AddLiquidityArgs(
                     GHST,
                     GLTR,
-                    amountA,
-                    amountB,
+                    IERC20(GHST).balanceOf(address(this)),
+                    IERC20(GLTR).balanceOf(address(this)),
                     0,
                     0
                 );
