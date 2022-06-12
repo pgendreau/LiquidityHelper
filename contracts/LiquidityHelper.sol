@@ -318,14 +318,14 @@ contract LiquidityHelper is ILiquidityHelper {
         // transfer alchemica
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(msg.sender);
-            if (balance >= minAmount) {
+            if (balance > 0) {
                 transferTokenFromOwner(alchemicaTokens[i], balance);
             }
         }
         // transfer GLTR if to be pooled
         if (poolGLTR) {
             balance = IERC20(GLTR).balanceOf(msg.sender);
-            if (balance >= minAmount) {
+            if (balance > 0) {
                 transferTokenFromOwner(GLTR, balance);
             }
         }
@@ -338,7 +338,7 @@ contract LiquidityHelper is ILiquidityHelper {
         // transfer alchemica
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(msg.sender);
-            if (balance >= minAmount) {
+            if (balance > 0) {
                 amount = balance*_percent/100;
                 transferTokenFromOwner(alchemicaTokens[i], amount);
             }
@@ -346,7 +346,7 @@ contract LiquidityHelper is ILiquidityHelper {
         // transfer GLTR if to be pooled
         if (poolGLTR) {
             balance = IERC20(GLTR).balanceOf(msg.sender);
-            if (balance >= minAmount) {
+            if (balance > 0) {
                 amount = balance*_percent/100;
                 transferTokenFromOwner(GLTR, amount);
             }
@@ -360,7 +360,7 @@ contract LiquidityHelper is ILiquidityHelper {
         for (uint256 i; i < pools.length; i++) {
             pool = pools[i];
             balance = getStakingPoolBalance(pool).amount;
-            if (balance >= minAmount) {
+            if (balance > 0) {
                 arg = UnStakePoolTokenArgs(
                     pool,
                     balance
@@ -376,30 +376,30 @@ contract LiquidityHelper is ILiquidityHelper {
         uint256 balance;
         // return GHST
         balance = IERC20(GHST).balanceOf(address(this));
-        if (balance >= minAmount) {
+        if (balance > 0) {
             require(IERC20(GHST).transfer(owner, balance));
         }
         // return wapGHST
         balance = IERC20(wapGHST).balanceOf(address(this));
-        if (balance >= minAmount) {
+        if (balance > 0) {
             require(IERC20(wapGHST).transfer(owner, balance));
         }
         // return GLTR
         balance = IERC20(GLTR).balanceOf(address(this));
-        if (balance >= minAmount) {
+        if (balance > 0) {
             require(IERC20(GLTR).transfer(owner, balance));
         }
         // return alchemica
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
-            if (balance >= minAmount) {
+            if (balance > 0) {
                 require(IERC20(alchemicaTokens[i]).transfer(owner, balance));
             }
         }
         // return lp tokens
         for (uint256 i; i < lpTokens.length; i++) {
             balance = IERC20(lpTokens[i]).balanceOf(address(this));
-            if (balance >= minAmount) {
+            if (balance > 0) {
                 require(IERC20(lpTokens[i]).transfer(owner, balance));
             }
         }
@@ -415,7 +415,7 @@ contract LiquidityHelper is ILiquidityHelper {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
             if (balance >= minAmount) {
                 amount = balance*_percent/100;
-                // swap tokens for GHST
+                // swap token for GHST
                 SwapTokenForGHSTArgs memory arg = SwapTokenForGHSTArgs(
                     alchemicaTokens[i],
                     // swap half of the balance
@@ -428,22 +428,22 @@ contract LiquidityHelper is ILiquidityHelper {
         batchSwapTokenForGHST(args);
     }
 
-    function swapAllTokensForGHST() external onlyOwner {
+    function swapAllPoolableTokensForGHST() external onlyOwner {
         uint256 balance;
-        SwapTokenForGHSTArgs memory arg;
-        // swap alchemica
+        SwapTokenForGHSTArgs[] memory args;
+        // swap all alchemica tokens
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
             if (balance >= minAmount) {
-                // swap tokens for GHST
-                arg = SwapTokenForGHSTArgs(
+                // swap token for GHST
+                SwapTokenForGHSTArgs memory arg = SwapTokenForGHSTArgs(
                     alchemicaTokens[i],
-                    // swap half of the balance
                     balance,
                     0
                 );
-                swapTokenForGHST(arg);
+                args[i] = arg;
             }
+            batchSwapTokenForGHST(args);
         }
         // swap GLTR
         balance = IERC20(GLTR).balanceOf(address(this));
