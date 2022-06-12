@@ -162,6 +162,7 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function setMinAmount(uint256 _amount) external onlyOwner {
+        require(_amount > 0, "Minimum amount should be greater than 0");
         minAmount = _amount;
     }
 
