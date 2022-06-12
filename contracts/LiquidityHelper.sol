@@ -208,7 +208,7 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function batchStakePoolToken(StakePoolTokenArgs[] memory _args)
-        public 
+        external 
     {
         for (uint256 i; i < _args.length; i++) {
             stakePoolToken(_args[i]);
@@ -264,7 +264,7 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function batchSwapTokenForGHST(SwapTokenForGHSTArgs[] memory _args)
-        public 
+        external 
     {
         for (uint256 i; i < _args.length; i++) {
             swapTokenForGHST(_args[i]);
@@ -284,7 +284,7 @@ contract LiquidityHelper is ILiquidityHelper {
         );
     }
 
-    function batchAddLiquidity(AddLiquidityArgs[] memory _args) public {
+    function batchAddLiquidity(AddLiquidityArgs[] memory _args) external {
         for (uint256 i; i < _args.length; i++) {
             addLiquidity(_args[i]);
         }
@@ -409,48 +409,44 @@ contract LiquidityHelper is ILiquidityHelper {
         require(_percent > 0 && _percent < 100, "Percentage need to be between 1-99");
         uint256 balance;
         uint256 amount;
-        SwapTokenForGHSTArgs[] memory args;
+        SwapTokenForGHSTArgs memory arg;
         // swap all alchemica tokens
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
             if (balance >= minAmount) {
                 amount = balance*_percent/100;
                 // swap token for GHST
-                SwapTokenForGHSTArgs memory arg = SwapTokenForGHSTArgs(
+                arg = SwapTokenForGHSTArgs(
                     alchemicaTokens[i],
                     // swap half of the balance
                     amount,
                     0
                 );
-                args[i] = arg;
+                swapTokenForGHST(arg);
             }
         }
-        batchSwapTokenForGHST(args);
     }
 
     function swapAllPoolableTokensForGHST() external onlyOwner {
         uint256 balance;
-        SwapTokenForGHSTArgs[] memory args;
-        // swap all alchemica tokens
+        SwapTokenForGHSTArgs memory arg;
+        // swap all alchemica tokens for GHST
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
             if (balance >= minAmount) {
-                // swap token for GHST
-                SwapTokenForGHSTArgs memory arg = SwapTokenForGHSTArgs(
+                arg = SwapTokenForGHSTArgs(
                     alchemicaTokens[i],
                     balance,
                     0
                 );
-                args[i] = arg;
+                swapTokenForGHST(arg);
             }
-            batchSwapTokenForGHST(args);
         }
-        // swap GLTR
+        // swap GLTR for GHST
         balance = IERC20(GLTR).balanceOf(address(this));
         if (balance >= minAmount) {
             arg = SwapTokenForGHSTArgs(
                 GLTR,
-                // swap half of the balance
                 balance,
                 0
             );
