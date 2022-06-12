@@ -477,7 +477,8 @@ contract LiquidityHelper is ILiquidityHelper {
             }
         }
 
-        // pool (and stake) all the alchemica that is left
+        // swap, pool (and optionally stake) all the alchemica that is left
+        // done one by one to always have the right amount of GHST for each
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
             if (balance >= minAmount) {
