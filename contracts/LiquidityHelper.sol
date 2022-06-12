@@ -30,7 +30,7 @@ contract LiquidityHelper is ILiquidityHelper {
     address operator;
     bool poolGLTR = true;
     bool doStaking = true;
-    uint256 minAmount = 0;
+    uint256 minAmount = 100000000000000000; // need at least 0.1 to swap
     uint256 singleGHSTPercent = 0;
 
     constructor(
