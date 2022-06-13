@@ -29,8 +29,9 @@ contract LiquidityHelper is ILiquidityHelper {
     address owner;
     address operator;
     address recipient;
-    bool poolGLTR = true;
+    bool poolGLTR = false;
     bool doStaking = true;
+    bool returnLPTokens = false;
     uint256 minAmount = 100000000000000000; // do not set to 0, 1 means any amount
     uint256 singleGHSTPercent = 0;
 
@@ -414,9 +415,21 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function returnAllTokens() external onlyOwner {
-        // unstake and claim from GLTR pools
-        unstakeAllPools();
         uint256 balance;
+        // unstake and claim GLTR from all pools
+        unstakeAllPools();
+        if (returnLPTokens) {
+            // return lp tokens
+            for (uint256 i; i < lpTokens.length; i++) {
+                balance = IERC20(lpTokens[i]).balanceOf(address(this));
+                if (balance > 0) {
+                    require(IERC20(lpTokens[i]).transfer(owner, balance));
+                }
+            }
+        } else {
+            // remove liquidity from all pools
+            unpoolAllTokens();
+        }
         // return GHST
         balance = IERC20(GHST).balanceOf(address(this));
         if (balance > 0) {
@@ -437,13 +450,6 @@ contract LiquidityHelper is ILiquidityHelper {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
             if (balance > 0) {
                 require(IERC20(alchemicaTokens[i]).transfer(owner, balance));
-            }
-        }
-        // return lp tokens
-        for (uint256 i; i < lpTokens.length; i++) {
-            balance = IERC20(lpTokens[i]).balanceOf(address(this));
-            if (balance > 0) {
-                require(IERC20(lpTokens[i]).transfer(owner, balance));
             }
         }
     }
