@@ -247,15 +247,14 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function claimReward(uint256 _poolId)
-        public
-        onlyOwner
+        external
+        onlyOperatorOrOwner
     {
         farm.harvest(_poolId);
     }
 
     function batchClaimReward(uint256[] memory _pools)
-        public
-        onlyOwner
+        external
     {
         farm.batchHarvest(_pools);
     }
@@ -467,6 +466,15 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    // To save gas no explicit claiming is done in this function
+    // because adding to the stake claims automatically but this
+    // has some implications:
+    // - if some token balance is lower than minAmount claiming will not be
+    //   done for that pool
+    // - if doStaking is set to false after some liquidities have been staked
+    //   rewards will need to be claimed independently by calling claimReward
+    // - if poolGLTR is true claimed GLTR will be autocompouned only next time
+    //   this function is called
     function processAllTokens() external onlyOperatorOrOwner {
         SwapTokenForGHSTArgs memory swapArg;
         AddLiquidityArgs memory poolArg;
@@ -520,11 +528,11 @@ contract LiquidityHelper is ILiquidityHelper {
                 }
             }
         }
+
+        // get final GLTR balance
+        balance = IERC20(GLTR).balanceOf(address(this));
         // if pooling GLTR with GHST
         if (poolGLTR) {
-            // get all GLTR first
-            batchClaimReward(pools);
-            balance = IERC20(GLTR).balanceOf(address(this));
             if (balance >= minAmount) {
                 // split GLTR for GHST
                 swapArg = SwapTokenForGHSTArgs(
@@ -554,6 +562,11 @@ contract LiquidityHelper is ILiquidityHelper {
                     );
                     stakePoolToken(stakeArg);
                 }
+            }
+        } else {
+            // send GLTR to recipient
+            if (balance > 0) {
+                require(IERC20(GLTR).transfer(recipient, balance));
             }
         }
     }
