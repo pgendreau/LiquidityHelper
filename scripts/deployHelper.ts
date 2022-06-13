@@ -21,6 +21,7 @@ export async function deployHelper() {
   const wapGhst = "0x73958d46B7aA2bc94926d8a215Fa560A5CdCA3eA";
   const owner = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
   const operator = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
+  const recipient = "0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD";
 
   const Helper = await ethers.getContractFactory("LiquidityHelper");
   const helper = await Helper.deploy(
@@ -32,7 +33,8 @@ export async function deployHelper() {
     ghst,
     wapGhst,
     owner,
-    operator
+    operator,
+    recipient
   );
 
   //@ts-ignore

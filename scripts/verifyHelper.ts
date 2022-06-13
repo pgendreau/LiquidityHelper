@@ -4,6 +4,7 @@ async function verifyHelper(
   deployedAddress: string,
   owner: string,
   operator: string,
+  recipient: string,
 ) {
   await run('verify:verify', {
     address: deployedAddress,
@@ -28,12 +29,14 @@ async function verifyHelper(
       '0x73958d46B7aA2bc94926d8a215Fa560A5CdCA3eA',
       owner,
       operator,
+      recipient,
     ],
   })
 }
 
 verifyHelper(
   '0x6B715C77347073766D53D622D14e4BEBeBBC6507',
+  '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
   '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
   '0x43FF4C088df0A425d1a519D3030A1a3DFff05CfD',
 )
