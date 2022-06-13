@@ -136,6 +136,10 @@ contract LiquidityHelper is ILiquidityHelper {
         return doStaking;
     }
 
+    function getReturnLPTokens() external view returns (bool) {
+        return returnLPTokens;
+    }
+
     function getOperator() external view returns (address) {
         return operator;
     }
@@ -172,6 +176,10 @@ contract LiquidityHelper is ILiquidityHelper {
 
     function setDoStaking(bool _doStaking) external onlyOwner {
         doStaking = _doStaking;
+    }
+
+    function setReturnLPTokens(bool _returnLPTokens) external onlyOwner {
+        returnLPTokens = _returnLPTokens;
     }
 
     function setMinAmount(uint256 _amount) external onlyOwner {
