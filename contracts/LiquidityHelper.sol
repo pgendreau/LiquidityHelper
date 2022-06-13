@@ -430,15 +430,15 @@ contract LiquidityHelper is ILiquidityHelper {
             // remove liquidity from all pools
             unpoolAllTokens();
         }
+        // unwrap wapGHST
+        balance = IERC20(wapGHST).balanceOf(address(this));
+        if (balance > 0) {
+            IWrappedAToken(wapGHST).leaveToUnderlying(balance);
+        }
         // return GHST
         balance = IERC20(GHST).balanceOf(address(this));
         if (balance > 0) {
             require(IERC20(GHST).transfer(owner, balance));
-        }
-        // return wapGHST
-        balance = IERC20(wapGHST).balanceOf(address(this));
-        if (balance > 0) {
-            require(IERC20(wapGHST).transfer(owner, balance));
         }
         // return GLTR
         balance = IERC20(GLTR).balanceOf(address(this));
