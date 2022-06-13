@@ -302,7 +302,7 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
-    function removeLiquidity(RemoveLiquidityArgs calldata _args)
+    function removeLiquidity(RemoveLiquidityArgs memory _args)
         public
         onlyOwner
     {
@@ -317,7 +317,7 @@ contract LiquidityHelper is ILiquidityHelper {
         );
     }
 
-    function batchRemoveLiquidity(RemoveLiquidityArgs[] calldata _args)
+    function batchRemoveLiquidity(RemoveLiquidityArgs[] memory _args)
         external
     {
         for (uint256 i; i < _args.length; i++) {
@@ -362,6 +362,37 @@ contract LiquidityHelper is ILiquidityHelper {
                 amount = balance*_percent/100;
                 transferTokenFromOwner(GLTR, amount);
             }
+        }
+    }
+
+    function unpoolAllTokens() public onlyOwner {
+        uint256 balance;
+        RemoveLiquidityArgs memory arg;
+        // remove liquidity from all alchmicas pools
+        for (uint256 i; i < alchemicaTokens.length; i++) {
+            balance = IERC20(lpTokens[i]).balanceOf(address(this));
+            if (balance > 0) {
+                arg = RemoveLiquidityArgs(
+                    GHST,
+                    alchemicaTokens[i],
+                    balance,
+                    0,
+                    0
+                ); 
+                removeLiquidity(arg);
+            }
+        }
+        // remove liquidity for gltr pool (5th pair)
+        balance = IERC20(lpTokens[4]).balanceOf(address(this));
+        if (balance > 0) {
+            arg = RemoveLiquidityArgs(
+                GHST,
+                GLTR,
+                balance,
+                0,
+                0
+            ); 
+            removeLiquidity(arg);
         }
     }
 
