@@ -28,6 +28,7 @@ contract LiquidityHelper is ILiquidityHelper {
     address wapGHST;
     address owner;
     address operator;
+    address recipient;
     bool poolGLTR = true;
     bool doStaking = true;
     uint256 minAmount = 100000000000000000; // do not set to 0, 1 means any amount
@@ -42,7 +43,8 @@ contract LiquidityHelper is ILiquidityHelper {
         address _ghst,
         address _wrappedAmGhst,
         address _owner,
-        address _operator
+        address _operator,
+        address _recipient
     ) {
         //approve GHST for deposit and wrap
         require(IERC20(_ghst).approve(_routerAddress, type(uint256).max));
@@ -88,6 +90,7 @@ contract LiquidityHelper is ILiquidityHelper {
         wapGHST = _wrappedAmGhst;
         owner = _owner;
         operator = _operator;
+        recipient = _recipient;
     }
 
     modifier onlyOwner() {
@@ -136,6 +139,10 @@ contract LiquidityHelper is ILiquidityHelper {
         return operator;
     }
 
+    function getRecipient() external view returns (address) {
+        return recipient;
+    }
+
     function getMinAmount() external view returns (uint256) {
         return minAmount;
     }
@@ -151,6 +158,11 @@ contract LiquidityHelper is ILiquidityHelper {
     function setOperator(address _operator) external onlyOwner {
         assert(_operator != address(0));
         operator = _operator;
+    }
+
+    function setRecipient(address _recipient) external onlyOwner {
+        assert(_recipient != address(0));
+        recipient = _recipient;
     }
 
     function setPoolGLTR(bool _poolGLTR) external onlyOwner {
