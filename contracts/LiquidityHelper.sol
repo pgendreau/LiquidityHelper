@@ -354,7 +354,7 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
-    function unstakeAllPools() public {
+    function unstakeAllPools() public onlyOwner {
         uint256 pool;
         uint256 balance;
         UnStakePoolTokenArgs memory arg;
@@ -371,7 +371,7 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
-    function returnAllTokens() external {
+    function returnAllTokens() external onlyOwner {
         // unstake and claim from GLTR pools
         unstakeAllPools();
         uint256 balance;
