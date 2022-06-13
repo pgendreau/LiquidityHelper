@@ -13,7 +13,7 @@ interface ILiquidityHelper {
     uint256 _amount;
   }
 
-  struct UnStakePoolTokenArgs {
+  struct UnstakePoolTokenArgs {
     uint256 _poolId;
     uint256 _amount;
   }

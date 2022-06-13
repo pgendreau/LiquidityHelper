@@ -228,7 +228,7 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
-    function unStakePoolToken(UnStakePoolTokenArgs memory _args)
+    function unstakePoolToken(UnstakePoolTokenArgs memory _args)
         public
         onlyOwner 
     {
@@ -238,11 +238,11 @@ contract LiquidityHelper is ILiquidityHelper {
         );
     }
 
-    function batchUnStakePoolToken(UnStakePoolTokenArgs[] memory _args)
+    function batchUnstakePoolToken(UnstakePoolTokenArgs[] memory _args)
         external
     {
         for (uint256 i; i < _args.length; i++) {
-            unStakePoolToken(_args[i]);
+            unstakePoolToken(_args[i]);
         }
     }
 
@@ -368,16 +368,16 @@ contract LiquidityHelper is ILiquidityHelper {
     function unstakeAllPools() public onlyOwner {
         uint256 pool;
         uint256 balance;
-        UnStakePoolTokenArgs memory arg;
+        UnstakePoolTokenArgs memory arg;
         for (uint256 i; i < pools.length; i++) {
             pool = pools[i];
             balance = getStakingPoolBalance(pool).amount;
             if (balance > 0) {
-                arg = UnStakePoolTokenArgs(
+                arg = UnstakePoolTokenArgs(
                     pool,
                     balance
                 ); 
-                unStakePoolToken(arg);
+                unstakePoolToken(arg);
             }
         }
     }
