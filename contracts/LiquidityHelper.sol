@@ -22,17 +22,27 @@ contract LiquidityHelper is ILiquidityHelper {
     //3--ghst-kek (pid 4)
     //4--ghst-gltr (pid 7)
     address[] lpTokens;
+    // staking contract
     IMasterChef farm;
+    // quickswap router
     IUniswapV2Router01 router;
     address GHST;
     address wapGHST;
+    // admin can change settings and withdraw
     address owner;
+    // bot can execute the contract
     address operator;
+    // address where to send GLTR if not pooling it
     address recipient;
+    // use generated GLTR to add liquidity to the GHST-GLTR pool
     bool poolGLTR = false;
+    // stake LP tokens for GLTR in the contract
     bool doStaking = true;
+    // when withdrawing return LP tokens or return pool tokens
     bool returnLPTokens = false;
+    // do not swap and pool balance lower than this
     uint256 minAmount = 100000000000000000; // do not set to 0, 1 means any amount
+    // percentage of tokens to stake as wapGHST (single side staking)
     uint256 singleGHSTPercent = 0;
 
     constructor(
@@ -47,7 +57,7 @@ contract LiquidityHelper is ILiquidityHelper {
         address _operator,
         address _recipient
     ) {
-        //approve GHST for deposit and wrap
+        //approve GHST for deposit and wrapping as amToken
         require(IERC20(_ghst).approve(_routerAddress, type(uint256).max));
         require(IERC20(_ghst).approve(_wrappedAmGhst, type(uint256).max));
         //approve wapGHST for deposit and staking
@@ -55,7 +65,7 @@ contract LiquidityHelper is ILiquidityHelper {
         require(IERC20(_wrappedAmGhst).approve(_farmAddress, type(uint256).max));
         //approve GLTR for deposit
         require(IERC20(_gltr).approve(_routerAddress, type(uint256).max));
-        //approve alchemica for deposit
+        //approve each alchemica for deposit
         for (uint256 i; i < _alchemicaTokens.length; i++) {
             require(
                 IERC20(_alchemicaTokens[i]).approve(
@@ -64,7 +74,7 @@ contract LiquidityHelper is ILiquidityHelper {
                 )
             );
         }
-        //approve lp tokens for withdrawal
+        //approve each lp tokens for withdrawal
         for (uint256 i; i < _pairAddresses.length; i++) {
             require(
                 IERC20(_pairAddresses[i]).approve(
@@ -73,7 +83,7 @@ contract LiquidityHelper is ILiquidityHelper {
                 )
             );
         }
-        //approve lp tokens for staking
+        //approve each lp tokens for staking
         for (uint256 i; i < _pairAddresses.length; i++) {
             require(
                 IERC20(_pairAddresses[i]).approve(
