@@ -123,7 +123,7 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     /// @notice Get balance of LP tokens staked in a pool
-    /// @param _poolID Id of the pool to query
+    /// @param _poolId ID of the pool to query
     /// @return ui A struct containing the balance and accrued reward
     function getStakingPoolBalance(uint256 _poolId)
         public
@@ -291,7 +291,7 @@ contract LiquidityHelper is ILiquidityHelper {
 
     /// @notice Claim GLTR rewards from a pool.
     ///  The tokens are returned to the contract
-    /// @param _poolId The Id of the pool to harvest
+    /// @param _poolId The ID of the pool to harvest
     function claimReward(uint256 _poolId)
         external
         onlyOperatorOrOwner
