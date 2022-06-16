@@ -28,7 +28,7 @@ contract LiquidityHelper is ILiquidityHelper {
     IUniswapV2Router01 router;
     address GHST;
     address wapGHST;
-    // admin can change settings and withdraw
+    // owner can change settings and withdraw
     address owner;
     // operator can only execute the contract
     address operator;
@@ -137,34 +137,42 @@ contract LiquidityHelper is ILiquidityHelper {
         return (ui);
     }
 
-    function getContractOwner() external view returns (address) {
-        return owner;
-    }
-
+    /// @notice Retrieve pooling of GLTR with GHST status
     function getPoolGLTR() external view returns (bool) {
         return poolGLTR;
     }
 
+    /// @notice Retrieve staking for GLTR status
     function getDoStaking() external view returns (bool) {
         return doStaking;
     }
 
+    /// @notice Retrieve wether to return LP receipts or tokens
     function getReturnLPTokens() external view returns (bool) {
         return returnLPTokens;
     }
 
+    /// @notice Retrieve owner address
+    function getContractOwner() external view returns (address) {
+        return owner;
+    }
+
+    /// @notice Retrieve operator address
     function getOperator() external view returns (address) {
         return operator;
     }
 
+    /// @notice Retrieve recipient address
     function getRecipient() external view returns (address) {
         return recipient;
     }
 
+    /// @notice Retrieve minimum amount for swaps
     function getMinAmount() external view returns (uint256) {
         return minAmount;
     }
 
+    /// @notice Retrieve percentage of token to swap for wapGHST
     function getSingleGHSTPercent() external view returns (uint256) {
         return singleGHSTPercent;
     }
@@ -183,35 +191,54 @@ contract LiquidityHelper is ILiquidityHelper {
         operator = _operator;
     }
 
-    /// @notice Set recipient address
+    /// @notice Set recipient address.
     /// @param _recipient Address of the recipient
     function setRecipient(address _recipient) external onlyOwner {
         assert(_recipient != address(0));
         recipient = _recipient;
     }
 
+    /// @notice Turn pooling of GLTR on or off
+    /// @param _poolGLTR If true use accrued GLTR to add
+    ///  liquidity to the GHST-GLTR pool
     function setPoolGLTR(bool _poolGLTR) external onlyOwner {
         poolGLTR = _poolGLTR;
     }
 
+    /// @notice Enable staking for GLTR
+    /// @param _doStaking If true wapGHST and LP tokens will
+    ///  be staked for GLTR when processAllTokens is called
     function setDoStaking(bool _doStaking) external onlyOwner {
         doStaking = _doStaking;
     }
 
+    /// @notice Specify to return LP token receipts instead
+    ///  of the underlying tokens when withdrawing all tokens.
+    ///  Useful if planning to stake outside of the contract
+    /// @param _returnLPTokens If true return LP tokens
     function setReturnLPTokens(bool _returnLPTokens) external onlyOwner {
         returnLPTokens = _returnLPTokens;
     }
 
+    /// @notice Set minimum amount for swaps
+    ///  Avoid wasting gas on dust amounts
+    ///  Set to 1 for no minimum
+    /// @param Minimum amount (in wei)
     function setMinAmount(uint256 _amount) external onlyOwner {
         require(_amount > 0, "Minimum amount should be greater than 0");
         minAmount = _amount;
     }
 
+    /// @notice Set percentage of tokens that will be converted to wapGHST
+    ///  Set to 0 to disable
+    /// @param _percent Percentage of tokens to swap
     function setSingleGHSTPercent(uint256 _percent) external onlyOwner {
         require(_percent >= 0 && _percent < 100, "Percentage should between 1-99 or 0 to disable");
         singleGHSTPercent = _percent;
     }
 
+    /// @notice Set contract owner
+    /// @param _owner Address of new owner
     function transferOwnership(address _owner) external onlyOwner {
         assert(_owner != address(0));
         owner = _owner;
