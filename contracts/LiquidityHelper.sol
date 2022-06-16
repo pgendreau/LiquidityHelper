@@ -223,7 +223,7 @@ contract LiquidityHelper is ILiquidityHelper {
     /// @notice Set minimum amount for swaps
     ///  Avoid wasting gas on dust amounts
     ///  Set to 1 for no minimum
-    /// @param Minimum amount (in wei)
+    /// @param _amount Minimum amount (in wei)
     function setMinAmount(uint256 _amount) external onlyOwner {
         require(_amount > 0, "Minimum amount should be greater than 0");
         minAmount = _amount;
