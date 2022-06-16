@@ -30,17 +30,17 @@ contract LiquidityHelper is ILiquidityHelper {
     address wapGHST;
     // admin can change settings and withdraw
     address owner;
-    // bot can execute the contract
+    // operator can only execute the contract
     address operator;
-    // address where to send GLTR if not pooling it
+    // address where to send GLTR (if not LPing it)
     address recipient;
     // use generated GLTR to add liquidity to the GHST-GLTR pool
     bool poolGLTR = false;
     // stake LP tokens for GLTR in the contract
     bool doStaking = true;
-    // when withdrawing return LP tokens or return pool tokens
+    // when withdrawing return LP tokens for staking
     bool returnLPTokens = false;
-    // do not swap and pool balance lower than this
+    // do not swap balance lower than this
     uint256 minAmount = 100000000000000000; // do not set to 0, 1 means any amount
     // percentage of tokens to stake as wapGHST (single side staking)
     uint256 singleGHSTPercent = 0;
@@ -122,6 +122,9 @@ contract LiquidityHelper is ILiquidityHelper {
         _;
     }
 
+    /// @notice Get balance of LP tokens staked in a pool
+    /// @param _poolID Id of the pool to query
+    /// @return ui A struct containing the balance and accrued reward
     function getStakingPoolBalance(uint256 _poolId)
         public
         view
@@ -166,15 +169,22 @@ contract LiquidityHelper is ILiquidityHelper {
         return singleGHSTPercent;
     }
 
+    /// @notice Allow another contract to spend this contract tokens
+    /// @param _token Address of token to spend
+    /// @param _spender Address of the contract to allow
     function setApproval(address _token, address _spender) public onlyOwner {
         require(IERC20(_token).approve(_spender, type(uint256).max));
     }
 
+    /// @notice Set operator address
+    /// @param _operator Address of the operator
     function setOperator(address _operator) external onlyOwner {
         assert(_operator != address(0));
         operator = _operator;
     }
 
+    /// @notice Set recipient address
+    /// @param _recipient Address of the recipient
     function setRecipient(address _recipient) external onlyOwner {
         assert(_recipient != address(0));
         recipient = _recipient;
@@ -207,18 +217,26 @@ contract LiquidityHelper is ILiquidityHelper {
         owner = _owner;
     }
 
+    /// @notice Transfer tokens from owner wallet
+    /// @param _token Address of the token to transfer
+    /// @param _amount Amount of tokens to transfer (in wei)
     function transferTokenFromOwner(address _token, uint256 _amount) public onlyOwner {
         uint256 allowance = IERC20(_token).allowance(msg.sender, address(this));
         require(allowance >= _amount, "Insufficient allowance");
         require(
             IERC20(_token).transferFrom(
-                msg.sender, 
+                msg.sender,
                 address(this),
                 _amount
             )
         );
     }
 
+    /// @notice Return tokens to owner.
+    ///  Number of amounts must match number of tokens.
+    ///  Index of amounts and tokens must correspond
+    /// @param _tokens List of tokens to return
+    /// @param _amounts List of respective amount of tokens to return
     function returnTokens(
         address[] calldata _tokens,
         uint256[] calldata _amounts
@@ -229,6 +247,9 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    /// @notice Stake LP receipt token for GLTR
+    /// @param _args A StakePoolTokenArgs struct containing
+    ///  the pool and the amount of tokens to stake
     function stakePoolToken(StakePoolTokenArgs memory _args)
         public
         onlyOperatorOrOwner
@@ -240,16 +261,19 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function batchStakePoolToken(StakePoolTokenArgs[] memory _args)
-        external 
+        external
     {
         for (uint256 i; i < _args.length; i++) {
             stakePoolToken(_args[i]);
         }
     }
 
+    /// @notice Unstake LP receipt token from GLTR farm
+    /// @param _args A UnstakePoolTokenArgs struct containing
+    ///  the pool and the amount of tokens to retrieve
     function unstakePoolToken(UnstakePoolTokenArgs memory _args)
         public
-        onlyOwner 
+        onlyOwner
     {
         farm.withdraw(
             _args._poolId,
@@ -265,6 +289,9 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    /// @notice Claim GLTR rewards from a pool.
+    ///  The tokens are returned to the contract
+    /// @param _poolId The Id of the pool to harvest
     function claimReward(uint256 _poolId)
         external
         onlyOperatorOrOwner
@@ -278,6 +305,9 @@ contract LiquidityHelper is ILiquidityHelper {
         farm.batchHarvest(_pools);
     }
 
+    /// @notice Swap a token for its GHST equivalent value
+    /// @param _args A SwapTokenForGHSTArgs struct containing
+    ///  the amounts desired in and out and the routing path
     function swapTokenForGHST(SwapTokenForGHSTArgs memory _args)
         public
         onlyOperatorOrOwner
@@ -295,13 +325,18 @@ contract LiquidityHelper is ILiquidityHelper {
     }
 
     function batchSwapTokenForGHST(SwapTokenForGHSTArgs[] memory _args)
-        external 
+        external
     {
         for (uint256 i; i < _args.length; i++) {
             swapTokenForGHST(_args[i]);
         }
     }
 
+    /// @notice Provide liquidity to a pool
+    /// @param _args A AddLiquidityArgs struct containing:
+    ///  the tokens pair,
+    ///  the amount of token to supply for each,
+    ///  the minimum amounts to supply for each token
     function addLiquidity(AddLiquidityArgs memory _args) public onlyOperatorOrOwner {
         router.addLiquidity(
             _args._tokenA,
@@ -321,6 +356,11 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    /// @notice Withdraw liquidity from a pool
+    /// @param _args A RemoveLiquidityArgs struct containing:
+    ///  pair of token to retrieve,
+    ///  amount of LP token to redeem,
+    ///  minimum amounts of each token to receive
     function removeLiquidity(RemoveLiquidityArgs memory _args)
         public
         onlyOwner
@@ -344,6 +384,11 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    /// @notice Transfer tokens directly from owner wallet.
+    ///  The caller is responsible for making sure the contract
+    ///  has sufficient allowance to each token.
+    ///  Transfer the balance of all alchemica tokens to the contract.
+    ///  Also transfer GLTR balance if poolGLTR is true
     function transferAllPoolableTokensFromOwner() external onlyOwner {
         uint256 balance;
         // transfer alchemica
@@ -362,6 +407,12 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    /// @notice Transfer a percentage of tokens directly from owner wallet.
+    ///  The caller is responsible for making sure the contract
+    ///  has sufficient allowance to each token.
+    ///  Transfer a portion of all alchemica tokens to the contract.
+    ///  Also transfer a portion of GLTR if poolGLTR is true
+    /// @param _percent Percentage of tokens to transfer
     function transferPercentageOfAllPoolableTokensFromOwner(uint256 _percent) external onlyOwner {
         require(_percent > 0 && _percent < 100, "Percentage need to be between 1-99");
         uint256 balance;
@@ -384,6 +435,7 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    /// @notice Withdraw liquidity from all pools
     function unpoolAllTokens() public onlyOwner {
         uint256 balance;
         RemoveLiquidityArgs memory arg;
@@ -397,11 +449,11 @@ contract LiquidityHelper is ILiquidityHelper {
                     balance,
                     0,
                     0
-                ); 
+                );
                 removeLiquidity(arg);
             }
         }
-        // remove liquidity for gltr pool (5th pair)
+        // remove liquidity for GLTR pool (5th pair)
         balance = IERC20(lpTokens[4]).balanceOf(address(this));
         if (balance > 0) {
             arg = RemoveLiquidityArgs(
@@ -410,11 +462,12 @@ contract LiquidityHelper is ILiquidityHelper {
                 balance,
                 0,
                 0
-            ); 
+            );
             removeLiquidity(arg);
         }
     }
 
+    /// @notice Recover all tokens from GLTR staking contract
     function unstakeAllPools() public onlyOwner {
         uint256 pool;
         uint256 balance;
@@ -426,12 +479,14 @@ contract LiquidityHelper is ILiquidityHelper {
                 arg = UnstakePoolTokenArgs(
                     pool,
                     balance
-                ); 
+                );
                 unstakePoolToken(arg);
             }
         }
     }
 
+    /// @notice Withdraw all tokens from contract.
+    ///  Remove liquidity from the pools unless returnLPTokens is true
     function returnAllTokens() external onlyOwner {
         uint256 balance;
         // unstake and claim GLTR from all pools
@@ -472,6 +527,8 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    /// @notice Swap a portion of all alchemica in the contract for GHST
+    /// @param _percent Percentage of tokens to swap
     function swapPercentageOfAllAlchemicaTokensForGHST(uint256 _percent) public onlyOperatorOrOwner {
         require(_percent > 0 && _percent < 100, "Percentage need to be between 1-99");
         uint256 balance;
@@ -494,6 +551,7 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
+    /// @notice swap all alchemica and GLTR in the contract for GHST
     function swapAllPoolableTokensForGHST() external onlyOwner {
         uint256 balance;
         SwapTokenForGHSTArgs memory arg;
@@ -521,15 +579,21 @@ contract LiquidityHelper is ILiquidityHelper {
         }
     }
 
-    // To save gas no explicit claiming is done in this function
-    // because adding to the stake claims automatically but this
-    // has some implications:
-    // - if some token balance is lower than minAmount claiming will not be
-    //   done for that pool
-    // - if doStaking is set to false after some liquidities have been staked
-    //   rewards will need to be claimed independently by calling claimReward
-    // - if poolGLTR is true claimed GLTR will be autocompouned only next time
-    //   this function is called
+    /// @notice Swap, pool and optionally stake all tokens.
+    ///  Swap a portion of each alchemica for wapGHST if
+    //   singleGHSTPercent is not set to 0.
+    ///  Stake wapGHST and LP tokens for GLTR if doStaking is true.
+    ///  Swap and pool collected GLTR with GHST if poolGLTR is true
+    ///  otherwise send it to the recipient address
+    /// @dev To save gas no explicit claiming is done in this function
+    ///  because adding to the stake claims automatically but this
+    ///  has some implications:
+    ///  - if some token balance is lower than minAmount claiming will not be
+    ///    done for that pool
+    ///  - if doStaking is set to false after some liquidities have been staked
+    ///    rewards will need to be claimed independently by calling claimReward
+    ///  - if poolGLTR is true claimed GLTR will be autocompouned only next time
+    ///    this function is called
     function processAllTokens() external onlyOperatorOrOwner {
         SwapTokenForGHSTArgs memory swapArg;
         AddLiquidityArgs memory poolArg;
