@@ -6,6 +6,68 @@ import "../interfaces/IUniswapV2Router01.sol";
 import "../interfaces/ILiquidityHelper.sol";
 import "../interfaces/IMasterChef.sol";
 
+/*******************************************************************************
+This contract contains many helper functions to manage liquidity for the
+gotchiverse tokens and some wrappers to help automate the process
+
+It has two main modes of operation:
+- Automated:
+  As a thirdparty address who receives alchemica directly and is
+  called regularily by an EOA to stake it for GLTR (in the contract)
+
+- Manual:
+  As a tool to facilitate the operation of getting the liquidity tokens
+  required to stake for GLTR (outside of the contract) or converting to GHST
+
+Optionnally it can:
+- convert a portion of the alchemica to wapGHST for single staking
+- pool GLTR with GHST to get more GLTR
+
+1. Deploy the contract by providing
+   - GLTR token address
+   - list of alchemica token addresses
+   - list of LP token address for each GHST pair
+   - the GLTR staking contract address
+   - the DEX router address
+   - the GHST token address
+   - the wapGHST token address
+   - the owner address
+   - the operator address (for manual use this could be the owner)
+   - the recipient address (for manual use this could be the owner)
+
+2. Configure the contract for your use case
+   Automated:
+   - make sure doStaking is set to true
+   - set a singlePercentGHST to stake a portion as wapGHST
+   - set poolGLTR to true if you want to stake GLTR-GHST too
+     or set a recipient for the collected GLTR (if not sent to owner)
+   - set the operator address if using a bot to call the contract
+   - set returnLPTokens to false to leave the pool when unstaking
+   Manual:
+   - make sure doStaking is set to false
+   - make sure returnLPTokens is set to true
+   - set poolGLTR to true if you want to LP GLTR-GHST too
+   - set a singlePercentGHST to convert a portion to wapGHST
+
+3. Use the contract
+   Automated:
+   - use the address of the contract as recipient for farmed alchemica
+   - call processAllTokens function regularily from the operator address
+     if poolGLTR is false accrued GLTR will be sent to the recipient address
+   - when done staking call returnAllTokens to retrieve your liquidity
+   Manual:
+   - send some tokens to the contract OR
+     set allowance for the contract to spend each token
+     and transfer them the using either of
+     - transferAllPoolableTokensFromOwner
+     - transferPercentageOfAllPoolableTokensFromOwner
+     note: those include alchemica and GLTR
+   - call processAllTokens to swap and pool all tokens
+     OR
+     call swapAllPoolableTokensForGHST to convert all tokens to GHST
+   - call returnAllTokens
+   - got to https://app.aavegotchi.com/stake-gltr and stake your LP tokens
+*******************************************************************************/
 contract LiquidityHelper is ILiquidityHelper {
     error LengthMismatch();
     // pool 0 is single wapGHST staking
