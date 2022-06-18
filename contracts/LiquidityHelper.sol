@@ -166,6 +166,10 @@ contract LiquidityHelper is ILiquidityHelper {
         recipient = _recipient;
     }
 
+    //
+    // modifiers
+    //
+
     modifier onlyOwner() {
         require(msg.sender == owner, "Not Owner");
         _;
@@ -183,6 +187,24 @@ contract LiquidityHelper is ILiquidityHelper {
         );
         _;
     }
+
+    //
+    // events
+    //
+
+    event receiveGHST(uint256 _amount);
+
+    event processToken(address _token, uint256 _amount);
+
+    event sendReward(uint256 _amount);
+
+    event unwrapGHST(uint256 _shares, uint256 _assets);
+
+    event returnToken(address _token, uint256 _amount);
+
+    //
+    // getters
+    //
 
     /// @notice Get balance of LP tokens staked in a pool
     /// @param _poolId ID of the pool to query
@@ -238,6 +260,10 @@ contract LiquidityHelper is ILiquidityHelper {
     function getSingleGHSTPercent() external view returns (uint256) {
         return singleGHSTPercent;
     }
+
+    //
+    // setters
+    //
 
     /// @notice Allow another contract to spend this contract tokens
     /// @param _token Address of token to spend
@@ -305,6 +331,10 @@ contract LiquidityHelper is ILiquidityHelper {
         assert(_owner != address(0));
         owner = _owner;
     }
+
+    //
+    // helpers
+    //
 
     /// @notice Transfer tokens from owner wallet
     /// @param _token Address of the token to transfer
@@ -404,13 +434,14 @@ contract LiquidityHelper is ILiquidityHelper {
         address[] memory path = new address[](2);
             path[0] = _args._token;
             path[1] = GHST;
-        router.swapExactTokensForTokens(
+        uint256[] memory amounts = router.swapExactTokensForTokens(
             _args._amount,
             _args._amountMin,
             path,
             address(this),
             block.timestamp + 3000
         );
+        emit receiveGHST(amounts[1]);
     }
 
     function batchSwapTokenForGHST(SwapTokenForGHSTArgs[] memory _args)
@@ -472,6 +503,10 @@ contract LiquidityHelper is ILiquidityHelper {
             removeLiquidity(_args[i]);
         }
     }
+
+    //
+    // wrappers
+    //
 
     /// @notice Transfer tokens directly from owner wallet.
     ///  The caller is responsible for making sure the contract
@@ -586,6 +621,7 @@ contract LiquidityHelper is ILiquidityHelper {
                 balance = IERC20(lpTokens[i]).balanceOf(address(this));
                 if (balance > 0) {
                     require(IERC20(lpTokens[i]).transfer(owner, balance));
+                    emit returnToken(lpTokens[i], balance);
                 }
             }
         } else {
@@ -595,23 +631,28 @@ contract LiquidityHelper is ILiquidityHelper {
         // unwrap wapGHST
         balance = IERC20(wapGHST).balanceOf(address(this));
         if (balance > 0) {
-            IWrappedAToken(wapGHST).leaveToUnderlying(balance);
+            uint256 assets;
+            assets = IWrappedAToken(wapGHST).leaveToUnderlying(balance);
+            emit unwrapGHST(balance, assets);
         }
         // return GHST
         balance = IERC20(GHST).balanceOf(address(this));
         if (balance > 0) {
             require(IERC20(GHST).transfer(owner, balance));
+            emit returnToken(GHST, balance);
         }
         // return GLTR
         balance = IERC20(GLTR).balanceOf(address(this));
         if (balance > 0) {
             require(IERC20(GLTR).transfer(owner, balance));
+            emit returnToken(GLTR, balance);
         }
         // return alchemica
         for (uint256 i; i < alchemicaTokens.length; i++) {
             balance = IERC20(alchemicaTokens[i]).balanceOf(address(this));
             if (balance > 0) {
                 require(IERC20(alchemicaTokens[i]).transfer(owner, balance));
+                emit returnToken(alchemicaTokens[i], balance);
             }
         }
     }
@@ -690,15 +731,19 @@ contract LiquidityHelper is ILiquidityHelper {
         if (singleGHSTPercent > 0) {
             // swap alchemica for single staking first
             swapPercentageOfAllAlchemicaTokensForGHST(singleGHSTPercent);
-            // wrap GHST
-            IWrappedAToken(wapGHST).enterWithUnderlying(IERC20(GHST).balanceOf(address(this)));
-            // stake GHST
-            if (doStaking) {
-                StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
-                    0, // pool 0 = single staking wapGHST for gltr
-                    IERC20(wapGHST).balanceOf(address(this))
-                );
-                stakePoolToken(stakeArg);
+            balance = IERC20(GHST).balanceOf(address(this));
+            if (balance > 0) {
+                // wrap GHST
+                IWrappedAToken(wapGHST).enterWithUnderlying(balance);
+                // stake wapGHST
+                if (doStaking) {
+                    StakePoolTokenArgs memory stakeArg = StakePoolTokenArgs(
+                        0, // pool 0 = single staking wapGHST for gltr
+                        IERC20(wapGHST).balanceOf(address(this))
+                    );
+                    stakePoolToken(stakeArg);
+                }
+                emit processToken(wapGHST, balance);
             }
         }
 
@@ -734,6 +779,7 @@ contract LiquidityHelper is ILiquidityHelper {
                     );
                     stakePoolToken(stakeArg);
                 }
+                emit processToken(alchemicaTokens[i], balance);
             }
         }
 
@@ -770,11 +816,13 @@ contract LiquidityHelper is ILiquidityHelper {
                     );
                     stakePoolToken(stakeArg);
                 }
+                emit processToken(GLTR, balance);
             }
         } else {
             // send GLTR to recipient
             if (balance > 0) {
                 require(IERC20(GLTR).transfer(recipient, balance));
+                emit sendReward(balance);
             }
         }
     }
