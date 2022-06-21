@@ -1,7 +1,5 @@
-## Install Foundry using `foundryup`
+## LiquidityHelper
 
-## Run tests
+## Alchemica pooling/GLTR staking helper contract
 
-```bash
-forge test --fork-url <POLYGON_MAINNET_URL>
-```
+See contracts/LiquidityHelper.sol for usage and documentation
