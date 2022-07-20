@@ -5,6 +5,6 @@ typechain-types
 artifacts
 .vscode
 .env
-contracts.txt
+contracts*.txt
 tmp
 notes.txt
