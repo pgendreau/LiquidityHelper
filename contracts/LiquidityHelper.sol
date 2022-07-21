@@ -321,7 +321,7 @@ contract LiquidityHelper is ILiquidityHelper {
     ///  Set to 0 to disable
     /// @param _percent Percentage of tokens to swap
     function setSingleGHSTPercent(uint256 _percent) external onlyOwner {
-        require(_percent >= 0 && _percent < 100, "Percentage should between 1-99 or 0 to disable");
+        require(_percent >= 0 && _percent <= 100, "Percentage should be between 1-100 or 0 to disable");
         singleGHSTPercent = _percent;
     }
 
@@ -660,7 +660,7 @@ contract LiquidityHelper is ILiquidityHelper {
     /// @notice Swap a portion of all alchemica in the contract for GHST
     /// @param _percent Percentage of tokens to swap
     function swapPercentageOfAllAlchemicaTokensForGHST(uint256 _percent) public onlyOperatorOrOwner {
-        require(_percent > 0 && _percent < 100, "Percentage need to be between 1-99");
+        require(_percent > 0 && _percent <= 100, "Percentage should be between 1-100");
         uint256 balance;
         uint256 amount;
         SwapTokenForGHSTArgs memory arg;
