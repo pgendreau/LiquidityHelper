@@ -39,21 +39,21 @@ Optionnally it can:
    Automated:
    - make sure doStaking is set to true
    - set a singlePercentGHST to stake a portion as wapGHST
-   - set poolGLTR to true if you want to stake GLTR-GHST too
-     or set a recipient for the collected GLTR (if not sent to owner)
+   - set a recipient for the collected GLTR (if not sent to owner)
+   - set poolGLTRPercent if you want to compound some of the GLTR
+     by staking it in the GHST-GLTR pool
    - set the operator address if using a bot to call the contract
-   - set returnLPTokens to false to leave the pool when unstaking
+   - set returnLPTokens to false to leave the pools when unstaking
    Manual:
    - make sure doStaking is set to false
    - make sure returnLPTokens is set to true
-   - set poolGLTR to true if you want to LP GLTR-GHST too
+   - set poolGLTRPercent to 100 if you want to LP GLTR-GHST too
    - set a singlePercentGHST to convert a portion to wapGHST
 
 3. Use the contract
    Automated:
    - use the address of the contract as recipient for farmed alchemica
    - call processAllTokens function regularily from the operator address
-     if poolGLTR is false accrued GLTR will be sent to the recipient address
    - when done staking call returnAllTokens to retrieve your liquidity
    Manual:
    - send some tokens to the contract OR
@@ -96,8 +96,6 @@ contract LiquidityHelper is ILiquidityHelper {
     address operator;
     // address where to send GLTR (if not LPing it)
     address recipient;
-    // use generated GLTR to add liquidity to the GHST-GLTR pool
-    bool poolGLTR = false;
     // stake LP tokens for GLTR in the contract
     bool doStaking = true;
     // when withdrawing return LP tokens for staking
@@ -106,6 +104,8 @@ contract LiquidityHelper is ILiquidityHelper {
     uint256 minAmount = 100000000000000000; // do not set to 0, 1 means any amount
     // percentage of tokens to stake as wapGHST (single side staking)
     uint256 singleGHSTPercent = 0;
+    // percentage of GLTR to compound
+    uint256 poolGLTRPercent = 100;
 
     constructor(
         address _gltr,
@@ -221,11 +221,6 @@ contract LiquidityHelper is ILiquidityHelper {
         return (ui);
     }
 
-    /// @notice Retrieve pooling of GLTR with GHST status
-    function getPoolGLTR() external view returns (bool) {
-        return poolGLTR;
-    }
-
     /// @notice Retrieve staking for GLTR status
     function getDoStaking() external view returns (bool) {
         return doStaking;
@@ -261,6 +256,11 @@ contract LiquidityHelper is ILiquidityHelper {
         return singleGHSTPercent;
     }
 
+    /// @notice Retrieve percentage of GLTR to compound
+    function getPoolGLTRPercent() external view returns (uint256) {
+        return poolGLTRPercent;
+    }
+
     //
     // setters
     //
@@ -284,13 +284,6 @@ contract LiquidityHelper is ILiquidityHelper {
     function setRecipient(address _recipient) external onlyOwner {
         assert(_recipient != address(0));
         recipient = _recipient;
-    }
-
-    /// @notice Turn pooling of GLTR on or off
-    /// @param _poolGLTR If true use accrued GLTR to add
-    ///  liquidity to the GHST-GLTR pool
-    function setPoolGLTR(bool _poolGLTR) external onlyOwner {
-        poolGLTR = _poolGLTR;
     }
 
     /// @notice Enable staking for GLTR
@@ -323,6 +316,15 @@ contract LiquidityHelper is ILiquidityHelper {
     function setSingleGHSTPercent(uint256 _percent) external onlyOwner {
         require(_percent >= 0 && _percent <= 100, "Percentage should be between 1-100 or 0 to disable");
         singleGHSTPercent = _percent;
+    }
+
+    /// @notice Set percentage of GLTR that will be compounded (staked back)
+    ///  Set to 0 to disable
+    /// @param _percent Percentage of tokens to pool
+    //   half will be swapped to GHST
+    function setPoolGLTRPercent(uint256 _percent) external onlyOwner {
+        require(_percent >= 0 && _percent <= 100, "Percentage should be between 1-100 or 0 to disable");
+        poolGLTRPercent = _percent;
     }
 
     /// @notice Set contract owner
@@ -512,7 +514,7 @@ contract LiquidityHelper is ILiquidityHelper {
     ///  The caller is responsible for making sure the contract
     ///  has sufficient allowance to each token.
     ///  Transfer the balance of all alchemica tokens to the contract.
-    ///  Also transfer GLTR balance if poolGLTR is true
+    ///  Also transfer GLTR balance if poolGLTRPercent is set 100
     function transferAllPoolableTokensFromOwner() external onlyOwner {
         uint256 balance;
         // transfer alchemica
@@ -523,7 +525,7 @@ contract LiquidityHelper is ILiquidityHelper {
             }
         }
         // transfer GLTR if to be pooled
-        if (poolGLTR) {
+        if (poolGLTRPercent == 100) {
             balance = IERC20(GLTR).balanceOf(msg.sender);
             if (balance > 0) {
                 transferTokenFromOwner(GLTR, balance);
@@ -535,7 +537,7 @@ contract LiquidityHelper is ILiquidityHelper {
     ///  The caller is responsible for making sure the contract
     ///  has sufficient allowance to each token.
     ///  Transfer a portion of all alchemica tokens to the contract.
-    ///  Also transfer a portion of GLTR if poolGLTR is true
+    ///  Also transfer a portion of GLTR if poolGLTRPercent is set to 100
     /// @param _percent Percentage of tokens to transfer
     function transferPercentageOfAllPoolableTokensFromOwner(uint256 _percent) external onlyOwner {
         require(_percent > 0 && _percent < 100, "Percentage need to be between 1-99");
@@ -550,7 +552,7 @@ contract LiquidityHelper is ILiquidityHelper {
             }
         }
         // transfer GLTR if to be pooled
-        if (poolGLTR) {
+        if (poolGLTRPercent == 100) {
             balance = IERC20(GLTR).balanceOf(msg.sender);
             if (balance > 0) {
                 amount = balance*_percent/100;
@@ -713,8 +715,8 @@ contract LiquidityHelper is ILiquidityHelper {
     ///  Swap a portion of each alchemica for wapGHST if
     //   singleGHSTPercent is not set to 0.
     ///  Stake wapGHST and LP tokens for GLTR if doStaking is true.
-    ///  Swap and pool collected GLTR with GHST if poolGLTR is true
-    ///  otherwise send it to the recipient address
+    ///  Swap and pool poolGLTRPercent of collected GLTR with GHST
+    ///  and send the rest to the recipient address
     /// @dev To save gas no explicit claiming is done in this function
     ///  because adding to the stake claims automatically but this
     ///  has some implications:
@@ -722,8 +724,8 @@ contract LiquidityHelper is ILiquidityHelper {
     ///    done for that pool
     ///  - if doStaking is set to false after some liquidities have been staked
     ///    rewards will need to be claimed independently by calling claimReward
-    ///  - if poolGLTR is true claimed GLTR will be autocompouned only next time
-    ///    this function is called
+    ///  - if poolGLTRPercent is greater than 0 a portion of the claimed GLTR will
+    ///    be autocompouned each time this function is called
     function processAllTokens() external onlyOperatorOrOwner {
         SwapTokenForGHSTArgs memory swapArg;
         AddLiquidityArgs memory poolArg;
@@ -783,16 +785,17 @@ contract LiquidityHelper is ILiquidityHelper {
             }
         }
 
-        // get final GLTR balance
+        // get GLTR balance
         balance = IERC20(GLTR).balanceOf(address(this));
-        // if pooling GLTR with GHST
-        if (poolGLTR) {
-            if (balance >= minAmount) {
+        // if compounding GLTR pool GLTR with GHST
+        if (poolGLTRPercent > 0) {
+            uint256 amount = balance*poolGLTRPercent/100;
+            if (amount >= minAmount) {
                 // split GLTR for GHST
                 swapArg = SwapTokenForGHSTArgs(
                     GLTR,
                     // swap half of the balance
-                    balance/2,
+                    amount/2,
                     0
                 );
                 swapTokenForGHST(swapArg);
@@ -816,14 +819,15 @@ contract LiquidityHelper is ILiquidityHelper {
                     );
                     stakePoolToken(stakeArg);
                 }
-                emit processToken(GLTR, balance);
+                // get final GLTR balance
+                balance = IERC20(GLTR).balanceOf(address(this));
+                emit processToken(GLTR, amount);
             }
-        } else {
-            // send GLTR to recipient
-            if (balance > 0) {
-                require(IERC20(GLTR).transfer(recipient, balance));
-                emit sendReward(balance);
-            }
+        }
+        // send any GLTR left to recipient
+        if (balance > 0) {
+            require(IERC20(GLTR).transfer(recipient, balance));
+            emit sendReward(balance);
         }
     }
 }
